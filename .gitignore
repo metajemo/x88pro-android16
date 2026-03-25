@@ -1,0 +1,38 @@
+# =============================================================================
+# X88 Pro Android 16 - .gitignore
+# =============================================================================
+
+# Backup files (contain proprietary firmware - do NOT commit)
+backup/
+*.img
+
+# AOSP source tree (100GB+ - way too large for git)
+aosp/
+
+# Build output
+out/
+
+# Vendor blobs (proprietary - cannot be redistributed)
+device/rockchip/x88pro/proprietary/
+
+# Extracted device tree binaries (keep only source .dts files)
+device/rockchip/x88pro/dts/*.dtb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+build.log
