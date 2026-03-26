@@ -36,7 +36,7 @@ Detailed hardware information extracted from the device in Phase 1.
 | Component | Chip | Notes |
 |---|---|---|
 | Ethernet | RTL8211 (M3295NL PHY) | Gigabit |
-| WiFi/BT | Cdtech module (onboard) | Exact chip TBD |
+| WiFi/BT | AMPAK AP6398S (Broadcom BCM43598) | WiFi 5 + BT 5.0, driver: brcmfmac |
 | USB | 3x USB-A + 1x USB-C OTG | Multiple USB controllers |
 
 ## Video Output
