@@ -440,7 +440,7 @@ verify() {
     fi
 
     # Check ccache
-    CACHE_SIZE=$(ccache -s 2>/dev/null | grep "max cache size" | awk '{print $4, $5}')
+    CACHE_SIZE=$(ccache -s 2>/dev/null | grep "Cache size (GB)" | awk '{print $4}')
     if [ -n "$CACHE_SIZE" ]; then
         success "ccache: $CACHE_SIZE configured"
     else
