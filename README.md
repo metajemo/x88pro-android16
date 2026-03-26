@@ -28,7 +28,7 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | Phase | Description | Status |
 |---|---|---|
 | Phase 1 | Device extraction & backup | ✅ Complete |
-| Phase 2 | Build environment setup | 🚧 In progress |
+| Phase 2 | Build environment setup | ✅ Complete |
 | Phase 3 | Device tree & vendor blobs | 🚧 In progress |
 | Phase 4 | Android 16 build | ⏳ Pending |
 | Phase 5 | Flash & verify | ⏳ Pending |
