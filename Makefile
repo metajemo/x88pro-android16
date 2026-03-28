@@ -166,31 +166,53 @@ phase2-sync:
 	@scripts/phase2_environment.sh sync $(AOSP_DIR) $(AOSP_MANIFEST) $(AOSP_BRANCH)
 
 # =============================================================================
-# PHASE 3 - DEVICE PREPARATION
+# PHASE 3 - DEVICE PREPARATION                                   [🚧 IN PROGRESS]
 # =============================================================================
 # Converts our extracted device data into the format Android 16 needs.
+#
+# Hardware confirmed from Phase 1 (research-verified March 2026):
+#   SoC:          Rockchip RK3566 (rk356x family)
+#   RAM:          8GB LPDDR4
+#   Storage:      128GB eMMC
+#   Ethernet:     Synopsys GMAC (stmmac driver - mainline) ✅
+#   WiFi/BT:      AMPAK AP6398S (BCM43598) - brcmfmac/btbcm (mainline) 🔧
+#   GPU:          Mali-G52 - libmali blob (NOT Panfrost for Android) 🔧
+#   Video decode: RKVDEC2 - Rockchip MPP (BSP kernel, no mainline driver) 🔧
+#   Video encode: RKVENC  - Rockchip MPP 🔧
+#   NPU:          RKNPU   - open source kernel driver + RKNN2 SDK 🔧
+#   HDMI audio:   PCM stereo only (no DD/DTS passthrough) ⚠️
+#   AV1/HDR:      NOT supported by RK3566 hardware ❌
+#
 # Steps:
-#   3a. Convert the binary DTB (device tree blob) back to human-readable DTS
-#   3b. Extract vendor blobs (proprietary GPU/video/WiFi drivers) from super.img
-#   3c. Create the Android device tree for the X88 Pro
+#   3a. extract-dt    - Convert binary DTB -> human-readable DTS source
+#   3b. extract-blobs - Unpack vendor partition from super.img
+#                       (libmali, librockchip_mpp, WiFi/BT firmware)
+#   3c. npu-blobs     - Download RKNN2 runtime (replaces Android 11 NPU blobs)
+#   3d. device-tree   - Generate Android 16 device tree skeleton
 # =============================================================================
 
-phase3: phase3-extract-dt phase3-extract-blobs phase3-device-tree
+phase3: phase3-extract-dt phase3-extract-blobs phase3-npu-blobs phase3-device-tree
 	@echo -e "$(GREEN)Phase 3 complete! Device tree and vendor blobs ready.$(NC)"
 
 phase3-extract-dt:
-	@echo -e "$(BLUE)==> Phase 3: Converting device tree blob to source...$(NC)"
+	@echo -e "$(BLUE)==> Phase 3a: Converting device tree blob to source...$(NC)"
 	@[ -f "$(BACKUP_DIR)/dtbo.img" ] || (echo -e "$(RED)ERROR: $(BACKUP_DIR)/dtbo.img not found. Run phase1 first.$(NC)" && exit 1)
 	@scripts/phase3_device_prep.sh extract-dt $(BACKUP_DIR) device/$(VENDOR)/$(DEVICE)
 
 phase3-extract-blobs:
-	@echo -e "$(BLUE)==> Phase 3: Extracting vendor blobs from super.img...$(NC)"
+	@echo -e "$(BLUE)==> Phase 3b: Extracting vendor blobs from super.img...$(NC)"
 	@[ -f "$(BACKUP_DIR)/super.img" ] || (echo -e "$(RED)ERROR: $(BACKUP_DIR)/super.img not found. Run phase1 first.$(NC)" && exit 1)
-	@echo -e "$(YELLOW)    This extracts proprietary Rockchip drivers (GPU, VPU, WiFi etc.)$(NC)"
+	@echo -e "$(YELLOW)    Extracts: libmali (GPU), librockchip_mpp (video), WiFi/BT firmware$(NC)"
+	@echo -e "$(YELLOW)    Note: NPU blobs intentionally skipped (Android 11 RKNN v1 incompatible with Android 16)$(NC)"
 	@scripts/phase3_device_prep.sh extract-blobs $(BACKUP_DIR)/super.img device/$(VENDOR)/$(DEVICE)/proprietary
 
+phase3-npu-blobs:
+	@echo -e "$(BLUE)==> Phase 3c: Downloading RKNN2 NPU runtime from Rockchip SDK...$(NC)"
+	@echo -e "$(YELLOW)    Using RKNN2 instead of Android 11 blobs - compatible with Android 16 HALs$(NC)"
+	@scripts/phase3_device_prep.sh npu-blobs device/$(VENDOR)/$(DEVICE)/proprietary
+
 phase3-device-tree:
-	@echo -e "$(BLUE)==> Phase 3: Generating Android 16 device tree...$(NC)"
+	@echo -e "$(BLUE)==> Phase 3d: Generating Android 16 device tree...$(NC)"
 	@scripts/phase3_device_prep.sh device-tree $(DEVICE) $(VENDOR) device/$(VENDOR)/$(DEVICE)
 
 # =============================================================================
