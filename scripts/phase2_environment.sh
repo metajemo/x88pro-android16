@@ -119,7 +119,8 @@ deps() {
         libssl-dev \
         libelf-dev \
         gcc-aarch64-linux-gnu \
-        g++-aarch64-linux-gnu
+        g++-aarch64-linux-gnu \
+	binwalk
 
     echo ""
     success "Dependencies installed successfully."
