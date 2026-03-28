@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * X88 Pro Android TV Box - Android 16 Device Tree
+ *
+ * Board: X88PRO-RK3566-4D32-V1.0
+ * SoC:   Rockchip RK3566
+ * RAM:   8GB LPDDR4
+ * eMMC:  128GB
+ * WiFi:  AMPAK AP6398S (Broadcom BCM43598) - brcmfmac
+ * BT:    AMPAK AP6398S (Broadcom BCM43598) - btbcm
+ * ETH:   Synopsys GMAC (snps,dwmac-4.20a)
+ *
+ * Based on Rockchip RK3566 BOX DEMO V10 reference design.
+ * The X88 Pro hardware matches the reference very closely -
+ * overrides below document confirmed differences only.
+ *
+ * Community project: https://github.com/emiliyan.paunov/x88pro-android16
+ */
+
+/dts-v1/;
+
+#include "rk3566-box-demo-v10.dtsi"
+#include "rk3568-android.dtsi"
+
+/ {
+	model = "X88 Pro Android TV Box (RK3566)";
+	compatible = "x88pro,rk3566-x88pro", "rockchip,rk3566";
+
+	/* 8GB LPDDR4 - confirmed via ADB (MemTotal: 7860196 kB) */
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x00200000 0x0 0x00200000
+		       0x0 0xf0000000 0x0 0x10000000
+		       0x1 0x00000000 0x1 0x00000000>;
+	};
+};
+
+/*
+ * TODO: Add X88 Pro specific overrides here as we discover differences.
+ *
+ * The X88 Pro matches the rk3566-box-demo-v10 reference design closely:
+ *   - WiFi:     ap6398s (same as reference)
+ *   - BT:       ap6398s (same as reference)  
+ *   - Ethernet: snps,dwmac-4.20a (same as reference)
+ *   - HDMI:     rk3568-dw-hdmi (same as reference)
+ *
+ * Differences to investigate:
+ *   - RAM: 8GB vs reference (verify memory node above)
+ *   - eMMC: 128GB (mmcblk2p15 = 111GB userdata confirmed)
+ *   - Any GPIO differences (hard to verify from decompiled DTS)
+ */
