@@ -99,136 +99,150 @@ extract_blobs() {
     SUPER_IMG="${2}"
     OUTPUT_DIR="${3}"
 
-    echo "==> Extracting vendor blobs from super.img..."
-    echo "    Source: $SUPER_IMG"
-    echo "    Output: $OUTPUT_DIR"
+    [ -f "$SUPER_IMG" ] || error "$SUPER_IMG not found. Run phase1 first."
+
+    info "Extracting vendor blobs from super.img..."
+    info "Source: $SUPER_IMG ($(du -sh "$SUPER_IMG" | cut -f1))"
+    info "Output: $OUTPUT_DIR"
 
     mkdir -p "$OUTPUT_DIR"
     mkdir -p /tmp/x88pro-super
 
     # Step 1: Convert sparse super.img to raw image
-    # super.img uses Android sparse format to save space
-    echo "    Step 1/3: Converting sparse image to raw..."
+    # Android sparse format uses a special header to skip empty blocks,
+    # making the file smaller than the actual partition size.
+    # simg2img converts it back to a flat raw image that tools can mount/read.
+    info "Step 1/4: Converting sparse image to raw (~3.1GB)..."
     simg2img "$SUPER_IMG" /tmp/x88pro-super/super_raw.img
+    success "Converted: $(du -sh /tmp/x88pro-super/super_raw.img | cut -f1)"
 
-    # Step 2: Unpack logical partitions from raw super image
-    # lpunpack extracts each logical partition as a separate .img file
-    echo "    Step 2/3: Unpacking logical partitions..."
+    # Step 2: Unpack logical partitions
+    # super_raw.img contains a partition table and multiple ext4 filesystems.
+    # lpunpack reads the table and writes each partition as a separate .img file:
+    #   /tmp/x88pro-super/system.img
+    #   /tmp/x88pro-super/vendor.img    <- this is what we need
+    #   /tmp/x88pro-super/product.img
+    #   /tmp/x88pro-super/system_ext.img
+    info "Step 2/4: Unpacking logical partitions..."
     lpunpack /tmp/x88pro-super/super_raw.img /tmp/x88pro-super/
+    success "Partitions unpacked:"
+    ls -lh /tmp/x88pro-super/*.img 2>/dev/null | awk '{print "      " $NF, $5}' || true
 
-    # Step 3: Extract files from vendor.img (ext4 filesystem)
-    echo "    Step 3/3: Extracting vendor partition files..."
-    # TODO: implement ext4 extraction
-    # Options: debugfs, 7zip, or mount -o loop (requires sudo)
+    # Step 3: Extract vendor partition contents
+    # vendor.img is an ext4 filesystem image.
+    # We use debugfs to extract files without needing root (no loop mount needed).
+    info "Step 3/4: Extracting vendor partition files..."
+    [ -f "/tmp/x88pro-super/vendor.img" ] || error "vendor.img not found after lpunpack"
+
+    mkdir -p /tmp/x88pro-vendor
+    debugfs -R "rdump / /tmp/x88pro-vendor" /tmp/x88pro-super/vendor.img 2>/dev/null
+    success "Vendor partition extracted: $(du -sh /tmp/x88pro-vendor | cut -f1)"
+
+    # Step 4: Copy relevant blobs to our output directory
+    info "Step 4/4: Copying relevant blobs..."
+
+    mkdir -p "$OUTPUT_DIR/lib"
+    mkdir -p "$OUTPUT_DIR/lib64"
+    mkdir -p "$OUTPUT_DIR/firmware"
+    mkdir -p "$OUTPUT_DIR/etc"
+    mkdir -p "$OUTPUT_DIR/bin"
+
+    # --- GPU: Mali-G52 (libmali) ---
+    # libmali provides OpenGL ES, Vulkan and OpenCL for Android's graphics stack.
+    # Android requires the proprietary Mali blob - open source Panfrost won't
+    # work with Android's gralloc HAL.
+    #
+    # IMPORTANT: libmali version must match the kernel's Mali driver version.
+    # Version mismatch causes black screen or rendering corruption.
+    # The Android 11 blob should work if kernel Mali version is compatible.
+    # If not, source updated blob from: github.com/tsukumijima/libmali-rockchip
+    find /tmp/x88pro-vendor/lib -name "libmali*.so" -exec cp {} "$OUTPUT_DIR/lib/" \; 2>/dev/null || true
+    find /tmp/x88pro-vendor/lib64 -name "libmali*.so" -exec cp {} "$OUTPUT_DIR/lib64/" \; 2>/dev/null || true
+
+    # Check libmali version (important for compatibility)
+    LIBMALI_VER=$(strings "$OUTPUT_DIR/lib64/libmali.so" 2>/dev/null | grep -i "arm_release_ver" | head -1 || echo "unknown")
+    if [ "$LIBMALI_VER" != "unknown" ]; then
+        success "GPU: libmali extracted, version: $LIBMALI_VER"
+        warning "Verify this version is compatible with your BSP kernel Mali driver"
+    else
+        warning "GPU: libmali extracted but version could not be determined"
+    fi
+
+    # --- Video: Rockchip MPP (Media Process Platform) ---
+    # librockchip_mpp.so provides hardware H.264/H.265/VP9 decode/encode.
+    # This is essential for video playback performance on Android.
+    # The RK3566 uses rkvdec2 which has NO mainline kernel driver - MPP
+    # with the BSP kernel is the only option for hardware video acceleration.
+    # RK3566 supported codecs via MPP:
+    #   Decode: H.264 (4K@60), H.265 (4K@60), VP9 (4K@60) - NO AV1, NO HDR
+    #   Encode: H.264 (1080p@60), H.265 (1080p@60)
+    find /tmp/x88pro-vendor/lib -name "librockchip_mpp*.so" -exec cp {} "$OUTPUT_DIR/lib/" \; 2>/dev/null || true
+    find /tmp/x88pro-vendor/lib64 -name "librockchip_mpp*.so" -exec cp {} "$OUTPUT_DIR/lib64/" \; 2>/dev/null || true
+    MPP_COUNT=$(ls "$OUTPUT_DIR/lib64"/librockchip_mpp*.so 2>/dev/null | wc -l)
+    success "Video MPP: $MPP_COUNT MPP library file(s) extracted"
+
+    # --- 2D Acceleration: RGA (Rockchip Graphics Acceleration) ---
+    # librga provides 2D hardware acceleration for image scaling, rotation,
+    # color format conversion. Used by video playback pipeline.
+    find /tmp/x88pro-vendor/lib -name "librga*.so" -exec cp {} "$OUTPUT_DIR/lib/" \; 2>/dev/null || true
+    find /tmp/x88pro-vendor/lib64 -name "librga*.so" -exec cp {} "$OUTPUT_DIR/lib64/" \; 2>/dev/null || true
+    success "2D accel: $(ls $OUTPUT_DIR/lib64/librga*.so 2>/dev/null | wc -l) RGA library file(s) extracted"
+
+    # --- WiFi: AP6398S (Broadcom BCM43598) firmware ---
+    # brcmfmac kernel driver (mainline) loads these firmware blobs at runtime.
+    # Without these files WiFi simply won't start.
+    # Files needed:
+    #   fw_bcm43598a3.bin      - Station mode (connecting to WiFi)
+    #   fw_bcm43598a3_apsta.bin - AP/hotspot mode
+    #   nvram_ap6398s.txt      - Board-specific RF calibration data
+    find /tmp/x88pro-vendor/firmware -name "fw_bcm43598*" -exec cp {} "$OUTPUT_DIR/firmware/" \; 2>/dev/null || true
+    find /tmp/x88pro-vendor/firmware -name "nvram_ap6398s*" -exec cp {} "$OUTPUT_DIR/firmware/" \; 2>/dev/null || true
+    WIFI_COUNT=$(ls "$OUTPUT_DIR/firmware"/fw_bcm43598* 2>/dev/null | wc -l)
+    success "WiFi firmware: $WIFI_COUNT file(s) extracted (AP6398S / BCM43598)"
+
+    # --- Bluetooth: AP6398S firmware ---
+    # btbcm kernel driver loads HCD (HCI Command Data) firmware for BT init.
+    # File needed: BCM43598A3.hcd
+    find /tmp/x88pro-vendor/firmware -name "BCM43598*" -exec cp {} "$OUTPUT_DIR/firmware/" \; 2>/dev/null || true
+    BT_COUNT=$(ls "$OUTPUT_DIR/firmware"/BCM43598* 2>/dev/null | wc -l)
+    success "BT firmware: $BT_COUNT file(s) extracted (AP6398S / BCM43598)"
+
+    # --- HAL configuration files ---
+    # /vendor/etc contains HAL configs, media codecs, audio policy etc.
+    # These tell Android which hardware capabilities are available.
+    cp -r /tmp/x88pro-vendor/etc/. "$OUTPUT_DIR/etc/" 2>/dev/null || true
+    success "HAL configs: $(find $OUTPUT_DIR/etc -type f | wc -l) config file(s) extracted"
+
+    # --- HAL binaries ---
+    cp -r /tmp/x88pro-vendor/bin/. "$OUTPUT_DIR/bin/" 2>/dev/null || true
+    success "HAL binaries: $(ls $OUTPUT_DIR/bin | wc -l) binary file(s) extracted"
+
+    # NOTE: NPU blobs from Android 11 are intentionally NOT copied here.
+    # The Android 11 RKNN v1 runtime is incompatible with Android 16 HALs.
+    # Run 'phase3_device_prep.sh npu-blobs' to get the RKNN2 runtime instead.
 
     echo ""
-    echo "==> Vendor blob extraction complete."
-    echo "    Key blobs to verify:"
-    echo "      - libmali*.so (GPU driver)"
-    echo "      - librkvpu*.so (Video Processing Unit)"
-    echo "      - firmware/rtl* or fw_bcm* (WiFi firmware)"
-}
-
-# =============================================================================
-# DEVICE-TREE - Generate Android 16 device tree files
-# =============================================================================
-# Creates the Android device tree directory structure needed to build AOSP.
-# This is the core of what makes Android work on our specific hardware.
-#
-# Files generated:
-#   device.mk           - Lists vendor blobs and build rules
-#   BoardConfig.mk      - Hardware parameters (partitions, kernel, security)
-#   AndroidProducts.mk  - Defines the lunch target
-#   x88pro.dts          - Device tree source for kernel
-#
-# Expected output:
-#   Generating device tree for: x88pro (rockchip)
-#   Created: device/rockchip/x88pro/device.mk
-#   Created: device/rockchip/x88pro/BoardConfig.mk
-#   Created: device/rockchip/x88pro/AndroidProducts.mk
-device_tree() {
-    DEVICE="${2}"
-    VENDOR="${3}"
-    OUTPUT_DIR="${4}"
-
-    echo "==> Generating Android 16 device tree for: $DEVICE ($VENDOR)..."
-
-    mkdir -p "$OUTPUT_DIR"
-
-    # Generate device.mk
-    # TODO: This will be populated with actual content in Phase 3
-    cat > "$OUTPUT_DIR/device.mk" << EOF
-# Device configuration for X88 Pro (RK3566)
-# Auto-generated by phase3_device_prep.sh - review and customize as needed
-
-PRODUCT_NAME := rockchip_x88pro
-PRODUCT_DEVICE := x88pro
-PRODUCT_BRAND := rockchip
-PRODUCT_MANUFACTURER := rockchip
-PRODUCT_MODEL := X88Pro20
-
-# TODO: Add vendor blob entries after phase3-extract-blobs
-# PRODUCT_COPY_FILES += ...
-EOF
-
-    # Generate BoardConfig.mk
-    cat > "$OUTPUT_DIR/BoardConfig.mk" << EOF
-# Board configuration for X88 Pro (RK3566)
-# Auto-generated by phase3_device_prep.sh - review and customize as needed
-
-# Architecture
-TARGET_ARCH := arm64
-TARGET_ARCH_VARIANT := armv8-a
-TARGET_CPU_ABI := arm64-v8a
-TARGET_CPU_VARIANT := cortex-a55
-
-# Secondary architecture (32-bit support)
-TARGET_2ND_ARCH := arm
-TARGET_2ND_ARCH_VARIANT := armv8-a
-TARGET_2ND_CPU_ABI := armeabi-v7a
-TARGET_2ND_CPU_VARIANT := cortex-a55
-
-# Platform
-TARGET_BOARD_PLATFORM := rk356x
-TARGET_BOOTLOADER_BOARD_NAME := rk30sdk
-
-# Kernel
-TARGET_KERNEL_ARCH := arm64
-TARGET_KERNEL_CONFIG := rockchip_defconfig
-# TODO: Set correct kernel source path after Phase 2 sync
-
-# Partitions (from Phase 1 extraction)
-BOARD_BOOTIMAGE_PARTITION_SIZE     := 67108864    # 64MB  (boot.img size)
-BOARD_DTBOIMG_PARTITION_SIZE       := 4194304     # 4MB   (dtbo.img size)
-BOARD_RECOVERYIMAGE_PARTITION_SIZE := 100663296   # 96MB  (recovery.img size)
-BOARD_SUPER_PARTITION_SIZE         := 3263168512  # ~3.1GB (super partition)
-
-# Dynamic partitions
-BOARD_SUPER_PARTITION_GROUPS := rockchip_dynamic_partitions
-BOARD_ROCKCHIP_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product system_ext
-BOARD_ROCKCHIP_DYNAMIC_PARTITIONS_SIZE := 3258974208
-
-# Verified Boot (disabled for development - enable for release)
-BOARD_AVB_ENABLE := false
-
-# TODO: More config to be added in Phase 3
-EOF
-
-    # Generate AndroidProducts.mk
-    cat > "$OUTPUT_DIR/AndroidProducts.mk" << EOF
-# Android Products for X88 Pro
-PRODUCT_MAKEFILES := \$(LOCAL_DIR)/device.mk
-COMMON_LUNCH_CHOICES := rockchip_x88pro-userdebug rockchip_x88pro-user
-EOF
-
-    echo "==> Device tree skeleton generated at: $OUTPUT_DIR"
-    echo "    Files created:"
-    echo "      $OUTPUT_DIR/device.mk"
-    echo "      $OUTPUT_DIR/BoardConfig.mk"
-    echo "      $OUTPUT_DIR/AndroidProducts.mk"
+    success "Vendor blob extraction complete."
     echo ""
-    echo "NOTE: These files are starting points. They will be refined"
-    echo "      throughout Phase 3 and Phase 4 as we discover what works."
+    echo "    Summary:"
+    echo "      GPU (Mali-G52):     $(ls $OUTPUT_DIR/lib64/libmali*.so 2>/dev/null | wc -l) libmali file(s) - $LIBMALI_VER"
+    echo "      Video (MPP):        $MPP_COUNT librockchip_mpp file(s)"
+    echo "      2D accel (RGA):     $(ls $OUTPUT_DIR/lib64/librga*.so 2>/dev/null | wc -l) librga file(s)"
+    echo "      WiFi firmware:      $WIFI_COUNT file(s)"
+    echo "      BT firmware:        $BT_COUNT file(s)"
+    echo "      HAL configs:        $(find $OUTPUT_DIR/etc -type f | wc -l) file(s)"
+    echo ""
+    warning "NPU blobs NOT extracted from Android 11 (intentionally - RKNN v1 incompatible)."
+    warning "Run './phase3_device_prep.sh npu-blobs $OUTPUT_DIR' for RKNN2 NPU support."
+    echo ""
+    echo "    Known hardware limitations (cannot be fixed in software):"
+    echo "      ❌ AV1 decode - not supported by RK3566 VPU hardware"
+    echo "      ❌ HDR display - not supported by RK3566"
+    echo "      ❌ DD/DTS audio passthrough - not supported"
+    echo "      ⚠️  HDMI audio: PCM stereo only"
+
+    # Cleanup temp files
+    rm -rf /tmp/x88pro-super /tmp/x88pro-vendor
 }
 
 # --- Main --------------------------------------------------------------------
