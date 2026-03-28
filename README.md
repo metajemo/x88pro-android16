@@ -12,14 +12,44 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 |---|---|
 | **Board** | X88PRO-RK3566-4D32-V1.0 |
 | **SoC** | Rockchip RK3566 (4x ARM Cortex-A55 @ 1.8GHz) |
-| **GPU** | ARM Mali-G52 |
+| **GPU** | ARM Mali-G52 2EE — OpenGL ES 3.2, Vulkan 1.1, OpenCL 2.0 |
+| **NPU** | Rockchip RKNPU — 0.8 TOPS (RKNN2 SDK, open source kernel driver) |
 | **RAM** | 8GB LPDDR4 |
-| **Storage** | 128GB eMMC |
-| **Ethernet** | Gigabit (RTL8211) |
-| **WiFi/BT** | Onboard combo module |
-| **Video out** | HDMI 2.0 |
-| **USB** | 3x USB-A + 1x USB-C (OTG) |
-| **Stock OS** | Android 11 (kernel 4.19.172) |
+| **Storage** | 128GB eMMC 5.1 |
+| **Ethernet** | Gigabit (RTL8211,Synopsys GMAC, `stmmac` driver — mainline) |
+| **WiFi** | AMPAK AP6398S / Broadcom BCM43598 — WiFi 5, `brcmfmac` driver (mainline) |
+| **Bluetooth** | AMPAK AP6398S / Broadcom BCM43598 — BT 5.0, `btbcm` driver (mainline) |
+| **Video out** | HDMI 2.0 (4K@60fps) |
+| **Video decode** | H.264/H.265/VP9 up to 4K@60fps via Rockchip MPP (no AV1, no HDR) |
+| **Video encode** | H.264/H.265 up to 1080p@60fps via Rockchip MPP |
+| **Audio** | HDMI PCM stereo (no DD/DTS passthrough), SPDIF |
+| **USB** | 3x USB-A + 1x USB-C OTG |
+| **Stock OS** | Android 11 (kernel 4.19.172, `userdebug` build) |
+
+---
+
+### Hardware Support Status
+
+| Component | Status | Notes |
+|---|---|---|
+| CPU / RAM / Storage | ✅ Full | Mainline kernel |
+| Ethernet | ✅ Full | `stmmac` driver, mainline |
+| USB | ✅ Full | XHCI/DWC3, mainline |
+| HDMI output | ✅ Full | Via Rockchip BSP kernel 5.10 |
+| WiFi | 🔧 Expected | `brcmfmac` mainline + firmware blobs |
+| Bluetooth | 🔧 Expected | `btbcm` mainline + firmware blobs |
+| GPU | 🔧 Expected | libmali blob from vendor partition |
+| Video decode (H.264/H.265/VP9) | 🔧 Expected | Rockchip MPP library |
+| Video encode | 🔧 Expected | Rockchip MPP library |
+| NPU | 🔧 Expected | RKNPU kernel driver + RKNN2 SDK |
+| HDMI audio (PCM) | 🔧 Expected | Stereo PCM only |
+| HDMI CEC | 🔧 Likely | TV compatibility dependent |
+| IR remote | 🔧 Likely | Needs DTS key mapping config |
+| HDMI audio passthrough | ❌ Not possible | Hardware limitation |
+| AV1 decode | ❌ Not possible | RK3566 VPU hardware limitation |
+| HDR display | ❌ Not possible | RK3566 hardware limitation |
+
+See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for full research details.
 
 ---
 
@@ -114,10 +144,21 @@ make phase3
 
 This will:
 - Convert the binary device tree blob (DTB) back to human-readable DTS source
-- Extract proprietary vendor blobs from super.img (GPU, VPU, WiFi drivers)
+- Extract proprietary vendor blobs from super.img:
+  - `libmali.so` — Mali-G52 GPU driver
+  - `librockchip_mpp.so` — Hardware video decode/encode
+  - WiFi/BT firmware (AP6398S / BCM43598)
+- Download RKNN2 NPU runtime from Rockchip's official SDK
 - Generate a proper Android 16 device tree for the X88 Pro
 
----
+> **Note on video decode:** The RK3566 uses `rkvdec2` which has no mainline
+> kernel driver yet. We use Rockchip's BSP kernel with their MPP library
+> for hardware accelerated H.264/H.265/VP9 decode. AV1 is not supported
+> by the RK3566 hardware.
+
+> **Note on GPU:** We use Rockchip's proprietary `libmali` blob for the
+> Mali-G52 GPU as Android's graphics stack requires it. The open source
+> Panfrost driver is not compatible with Android's gralloc HAL.
 
 ### Phase 4 — Build Android 16
 
