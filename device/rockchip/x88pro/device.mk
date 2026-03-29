@@ -149,7 +149,7 @@ PRODUCT_COPY_FILES += \
 # System properties
 # =============================================================================
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.product.board=rk3566 \
+    ro.product.board=rk30sdk \
     ro.board.platform=rk3566 \
     wifi.interface=wlan0 \
     wifi.supplicant_scan_interval=15 \

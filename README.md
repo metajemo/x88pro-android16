@@ -22,7 +22,7 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | **Video out** | HDMI 2.0 (4K@60fps) |
 | **Video decode** | H.264/H.265/VP9 up to 4K@60fps via Rockchip MPP (no AV1, no HDR) |
 | **Video encode** | H.264/H.265 up to 1080p@60fps via Rockchip MPP |
-| **Audio** | HDMI PCM stereo (no DD/DTS passthrough) |
+| **Audio** | HDMI PCM stereo + SPDIF output (no DD/DTS passthrough) |
 | **USB** | 3x USB-A + 1x USB-C OTG |
 | **Stock OS** | Android 11 (kernel 4.19.172, `userdebug` build) |
 
@@ -45,6 +45,7 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | Video encode | 🔧 Required | `libmpp.so` + OMX wrappers |
 | NPU | 🔧 Required | RKNPU kernel driver + RKNN2 v1.6.0 runtime |
 | HDMI audio (PCM) | 🔧 Expected | Stereo PCM only |
+| SPDIF output | ✅ Mainline | `rockchip,rk3568-spdif` — no blobs needed |
 | IR remote | 🔧 Likely | Needs DTS key mapping config |
 | HDMI audio passthrough | ❌ Not possible | Hardware limitation |
 | AV1 decode | ❌ Not possible | RK3566 VPU hardware limitation |

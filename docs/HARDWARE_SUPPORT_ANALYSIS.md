@@ -17,10 +17,25 @@ Stock OS: Android 11 (SDK 30, kernel 4.19.172)
 | eMMC (128GB) | mainline | ✅ Full | mmcblk2 |
 | USB 2.0/3.0 | mainline | ✅ Full | Host + OTG |
 | SD card slot | `dw_mmc` (mainline) | ✅ Full | `fe2b0000.dwmmc`, vold managed, auto-format |
+| IR receiver | `pwm-remotectl` (mainline) | ✅ Full | `fe700030.pwm`, full media remote keyset |
+| IR blaster | `ir-led` (mainline) | ✅ Full | Can transmit IR commands to other devices |
+| Front panel display | HT1628 LED driver (mainline) | ✅ Full | 7-segment clock display on box front |
+| Front panel LED | `work-led` (mainline) | ✅ Full | Power/status indicator LED |
+| RTC | HYM8563 (mainline) | ✅ Full | I2C battery-backed RTC at `3-0051` |
+| ADC | Rockchip SARADC (mainline) | ✅ Full | 8-channel, used for adc-keys |
+| Hardware watchdog | Rockchip watchdog (mainline) | ✅ Full | `/dev/watchdog0` |
+| OP-TEE / TrustZone | ARM TrustZone + OP-TEE | ✅ Full | `/dev/tee0`, `/dev/teepriv0`, RPMB |
+| RPMB | eMMC RPMB partition | ✅ Full | Hardware-backed Keymaster secure storage |
+| SPDIF output | `rockchip,rk3568-spdif` (mainline) | ✅ Full | TX only, confirmed in /proc/asound/cards |
+| GPIO | 5x GPIO controllers (mainline) | ✅ Full | `gpiochip0-4` |
+| I2C | 3x I2C buses (mainline) | ✅ Full | `i2c-2`, `i2c-3` (RTC), `i2c-6` |
+| UART | 2x UART (mainline) | ✅ Full | `ttyFIQ0` (debug), `ttyS1` |
+| SD card slot | `dw_mmc` (mainline) | ✅ Full | `fe2b0000.dwmmc`, vold managed, auto-format |
 | Ethernet (GMAC) | stmmac (mainline) | ✅ Full | Gigabit, `snps,dwmac-4.20a` |
 | HDMI output | BSP kernel VOP2 | ✅ Via BSP | Requires Rockchip BSP kernel 5.10 |
 | HDMI CEC | dw-hdmi-cec + `hdmi_cec.rk356x.so` | ✅ Confirmed | Blob confirmed in vendor partition |
-| HDMI audio | dw-hdmi-audio | ⚠️ Partial | PCM stereo only — no DD/DTS passthrough |
+| HDMI audio | dw-hdmi-i2s (mainline) | ⚠️ Partial | PCM stereo only — no DD/DTS passthrough |
+| SPDIF output | rockchip,rk3568-spdif (mainline) | ✅ Full | TX only, confirmed `status=okay` in DTS, no blobs needed |
 | GPU Mali-G52 | libmali blob (Bifrost) | 🔧 Blob required | `libGLES_mali.so` + gralloc bifrost HAL |
 | Vulkan 1.1 | libmali blob | 🔧 Blob required | `vulkan.rk356x.so` confirmed |
 | OpenCL 2.0 | libmali blob | 🔧 Blob required | Via `libGLES_mali.so` |
@@ -282,6 +297,94 @@ Since the box is always plugged in, this reports AC charging permanently.
 **Memory tracking:**  
 `memtrack.rk356x.so` — allows `adb shell dumpsys meminfo` and memory pressure
 reporting to work correctly.
+
+---
+
+
+---
+
+## Complete Peripheral Inventory (live device ADB scan, 2026-03-29)
+
+### Input
+| Device | Driver | Node | Keys |
+|---|---|---|---|
+| IR receiver | `pwm-remotectl` | `/dev/input/event0` | Full media remote: nav, vol, ch, color, play/pause, rewind, FF, search, menu, back, home, power, mute, text, language, mic mute |
+| ADC buttons | `adc-keys` | `/dev/input/event1` | Volume up/down (physical buttons on box) |
+
+### Audio
+```
+Card 0: hdmisound     - HDMI audio (i2s + dw-hdmi)
+Card 1: ROCKCHIPSPDIF - SPDIF output (TX only)
+```
+
+### Display
+- Resolution: 1920x1080 @ 60fps confirmed
+- Density: 213 dpi
+- HDR: not supported (`mSupportedHdrTypes=[]` confirmed)
+- HDMI CEC: confirmed (`/dev/cec0`, HAL v1.0 running)
+
+### LEDs / Indicators
+| Device | Purpose | Max Brightness |
+|---|---|---|
+| `ir-led` | IR blaster (transmit IR to other devices) | 255 |
+| `work-led` | Front panel status LED | 255 |
+| `mmc2::` | eMMC activity indicator | — |
+| `LED_HT1628` | Front panel 7-segment clock display | — |
+
+### Security
+| Device | Purpose |
+|---|---|
+| `/dev/tee0` | OP-TEE user space interface |
+| `/dev/teepriv0` | OP-TEE privileged interface |
+| `/dev/mmcblk2rpmb` | eMMC RPMB (Keymaster secure storage) |
+| `opteearmtz00` | OP-TEE ARM TrustZone device |
+
+### Thermal
+| Zone | Type | Temp at scan |
+|---|---|---|
+| thermal_zone0 | soc-thermal | 45.5°C |
+| thermal_zone1 | gpu-thermal | 43.1°C |
+
+Thermal governors available: `power_allocator`, `user_space`, `fair_share`, `step_wise`
+
+### CPU OPPs
+408 / 600 / 816 / 1104 / 1416 / 1608 / **1800 MHz** (7 levels)
+
+### GPU OPPs
+200 / 300 / 400 / 600 / **700 MHz** (5 levels)
+Governor: `simple_ondemand`
+
+### Partition Map (confirmed from /proc/partitions)
+| Partition | Name | Size | Notes |
+|---|---|---|---|
+| mmcblk2p1 | uboot | 2MB | U-Boot bootloader |
+| mmcblk2p2 | trust | 2MB | OP-TEE / TrustZone firmware |
+| mmcblk2p3 | misc | 2MB | Bootloader misc |
+| mmcblk2p4 | dtbo | 2MB | Device tree overlays |
+| mmcblk2p5 | vbmeta | 512KB | Verified boot metadata |
+| mmcblk2p6 | boot | 32MB | Kernel + ramdisk |
+| mmcblk2p7 | security | 2MB | Security storage |
+| mmcblk2p8 | recovery | 48MB | Recovery OS |
+| mmcblk2p9 | backup | 192MB | Backup partition |
+| mmcblk2p10 | cache | 192MB | Cache |
+| mmcblk2p11 | metadata | 8MB | Dynamic partition metadata |
+| mmcblk2p12 | baseparameter | 512KB | Rockchip display params |
+| mmcblk2p13 | logo | 8MB | Boot logo |
+| mmcblk2p14 | super | ~1.5GB | Dynamic: system+vendor+product+odm |
+| mmcblk2p15 | userdata | ~57GB | F2FS + AES-256-xts inline encryption |
+
+### Build Info (stock Android 11)
+```
+ro.board.platform  = rk356x
+ro.hardware        = rk30board
+ro.build.product   = rk356x_box
+ro.build.date      = Wed Jul 13 15:41:26 CST 2022
+ro.build.fingerprint = spoofed as Pixel 5 (redfin) for Play Store compat
+```
+
+### No Sensors
+`dumpsys sensorservice` confirms: **no sensors on device** — expected for a TV box.
+
 
 ---
 

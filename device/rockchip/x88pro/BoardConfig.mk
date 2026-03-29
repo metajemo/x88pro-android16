@@ -155,7 +155,7 @@ BOARD_AVB_ENABLE := true
 BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3  # disable verification for dev
 
 # --- Misc --------------------------------------------------------------------
-TARGET_BOARD_PLATFORM := rk3566
+TARGET_BOARD_PLATFORM := rk356x
 
 # Use Clang for kernel compilation
 TARGET_KERNEL_CLANG_COMPILE := true
