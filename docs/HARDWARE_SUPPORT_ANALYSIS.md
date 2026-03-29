@@ -15,7 +15,8 @@ Stock OS: Android 11 (SDK 30, kernel 4.19.172)
 | CPU (4x Cortex-A55) | mainline | ✅ Full | ARM64, all 4 cores |
 | RAM (8GB LPDDR4) | mainline | ✅ Full | ~7.5GB usable |
 | eMMC (128GB) | mainline | ✅ Full | mmcblk2 |
-| USB 2.0/3.0 | mainline | ✅ Full | Host + OTG |
+| USB 3.0 (x2) | mainline | ✅ Full | usb6 + usb8 @ 5Gbps (physical ports) |
+| USB 2.0 (x2) | mainline | ✅ Full | usb5 + usb7 @ 480Mbps (physical ports) |
 | SD card slot | `dw_mmc` (mainline) | ✅ Full | `fe2b0000.dwmmc`, vold managed, auto-format |
 | IR receiver | `pwm-remotectl` (mainline) | ✅ Full | `fe700030.pwm`, full media remote keyset |
 | IR blaster | `ir-led` (mainline) | ✅ Full | Can transmit IR commands to other devices |
@@ -396,6 +397,34 @@ ro.build.fingerprint = spoofed as Pixel 5 (redfin) for Play Store compat
 
 ### No Sensors
 `dumpsys sensorservice` confirms: **no sensors on device** — expected for a TV box.
+
+### USB Port Details
+8 USB buses total (4 physical, 4 internal):
+
+| Bus | Speed | Type | Purpose |
+|---|---|---|---|
+| usb1 | 480 Mbps | USB 2.0 | Internal (WiFi SDIO bridge) |
+| usb2 | 480 Mbps | USB 2.0 | Internal |
+| usb3 | 12 Mbps | USB 1.1 | Internal (BT UART bridge) |
+| usb4 | 12 Mbps | USB 1.1 | Internal |
+| usb5 | 480 Mbps | USB 2.0 | Physical port |
+| usb6 | 5000 Mbps | **USB 3.0** | Physical port |
+| usb7 | 480 Mbps | USB 2.0 | Physical port |
+| usb8 | 5000 Mbps | **USB 3.0** | Physical port |
+
+Physical configuration: **2x USB 3.0 + 2x USB 2.0** (not 3x USB-A + 1x USB-C as previously assumed)
+
+### eMMC Details
+- Model: `128G32` — 128GB
+- Manufacturer: Toshiba/Kioxia (manfid `0x000011`)
+
+### Memory
+- RAM: 7,854,792 KB (~7.5GB) usable
+- zram swap: 3,927,392 KB (~3.9GB, 50% of RAM) active at boot
+
+### SPDIF
+- ALSA device: `fe460000.spdif-dit-hifi`
+- Playback only (TX) — confirmed no capture subdevice
 
 
 ---

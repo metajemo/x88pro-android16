@@ -23,7 +23,7 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | **Video decode** | H.264/H.265/VP9 up to 4K@60fps via Rockchip MPP (no AV1, no HDR) |
 | **Video encode** | H.264/H.265 up to 1080p@60fps via Rockchip MPP |
 | **Audio** | HDMI PCM stereo + SPDIF output (no DD/DTS passthrough) |
-| **USB** | 3x USB-A + 1x USB-C OTG |
+| **USB** | 2x USB 3.0 + 2x USB 2.0 (physical) + 1x USB-C OTG |
 | **Stock OS** | Android 11 (kernel 4.19.172, `userdebug` build) |
 
 ---
