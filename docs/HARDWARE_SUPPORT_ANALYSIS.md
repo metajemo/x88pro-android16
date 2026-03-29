@@ -318,10 +318,22 @@ Card 1: ROCKCHIPSPDIF - SPDIF output (TX only)
 ```
 
 ### Display
-- Resolution: 1920x1080 @ 60fps confirmed
+- Resolution: 1920x1080 @ 60fps confirmed (tested on ASUS PL2481H monitor)
 - Density: 213 dpi
-- HDR: not supported (`mSupportedHdrTypes=[]` confirmed)
-- HDMI CEC: confirmed (`/dev/cec0`, HAL v1.0 running)
+- HDR: not supported (`mSupportedHdrTypes=[]` confirmed with display connected)
+- Max output: 4K@60fps (VOP2 hardware capability — limited by connected display EDID)
+- HDMI modes reported by monitor: 1920x1080, 1680x1050, 1280x1024, 1440x900, 1280x720, 1024x768, 800x600, 720x576, 720x480, 640x480
+
+### HDMI CEC (fully confirmed)
+- Device name on CEC bus: `X88Pro20`
+- CEC device type: Playback Device (type 4)
+- CEC logical address: `0x04`
+- CEC messages confirmed working:
+  - `<Text View On>` — can power on TV
+  - `<Active Source>` — announces itself as active source
+  - `<Set Osd Name>` — sets display name on TV
+  - `<Give Device Power Status>` — responds to power queries
+- Volume control via CEC: enabled (`mHdmiCecVolumeControlEnabled: true`)
 
 ### LEDs / Indicators
 | Device | Purpose | Max Brightness |
