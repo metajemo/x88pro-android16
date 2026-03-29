@@ -381,13 +381,81 @@ extract_blobs() {
     rm -rf /tmp/x88pro-super /tmp/x88pro-vendor
 }
 
+# --- NPU Blobs (Phase 3c) ---------------------------------------------------
+npu_blobs() {
+    OUTPUT_DIR="${2:-device/rockchip/x88pro/proprietary}"
+
+    info "Downloading RKNN2 runtime (v1.6.0) from rockchip-linux/rknn-toolkit2..."
+    info "Output: $OUTPUT_DIR"
+
+    mkdir -p "$OUTPUT_DIR/lib64"
+    mkdir -p "$OUTPUT_DIR/bin"
+    mkdir -p "$OUTPUT_DIR/etc"
+
+    BASE="https://raw.githubusercontent.com/rockchip-linux/rknn-toolkit2/master/rknpu2/runtime/Android"
+
+    # librknnrt.so - RKNN2 runtime library
+    # Provides the C API for running neural network inference on the NPU.
+    # Apps link against this library to submit inference jobs.
+    # IMPORTANT: Android 11 uses RKNN v1 (incompatible). This is RKNN v2.
+    # Expected: ~5.9MB
+    info "Downloading librknnrt.so..."
+    wget -q --show-progress \
+        "$BASE/librknn_api/arm64-v8a/librknnrt.so" \
+        -O "$OUTPUT_DIR/lib64/librknnrt.so" \
+        && success "librknnrt.so ($(du -sh $OUTPUT_DIR/lib64/librknnrt.so | cut -f1))" \
+        || error "Failed to download librknnrt.so"
+
+    # rknn_server - NPU inference server daemon
+    # Runs as a system service, accepts inference requests over a socket.
+    # Needed for multi-process NPU access (e.g. from app sandbox).
+    # Started by init via init.rknn_server.rc at boot.
+    # Expected: ~883KB
+    info "Downloading rknn_server..."
+    wget -q --show-progress \
+        "$BASE/rknn_server/arm64/rknn_server" \
+        -O "$OUTPUT_DIR/bin/rknn_server" \
+        && success "rknn_server ($(du -sh $OUTPUT_DIR/bin/rknn_server | cut -f1))" \
+        || error "Failed to download rknn_server"
+    chmod +x "$OUTPUT_DIR/bin/rknn_server"
+
+    # init.rknn_server.rc - service definition for rknn_server
+    # Tells Android's init to start rknn_server at boot as a core service.
+    # Must be placed in vendor/etc/ and referenced in device.mk.
+    info "Downloading init.rknn_server.rc..."
+    wget -q \
+        "https://raw.githubusercontent.com/rockchip-linux/rknn-toolkit2/master/rknpu2/runtime/init.rknn_server.rc" \
+        -O "$OUTPUT_DIR/etc/init.rknn_server.rc" \
+        && success "init.rknn_server.rc" \
+        || error "Failed to download init.rknn_server.rc"
+
+    echo ""
+    success "RKNN2 runtime download complete."
+    echo ""
+    echo "    Summary:"
+    echo "      librknnrt.so:       $(du -sh $OUTPUT_DIR/lib64/librknnrt.so 2>/dev/null | cut -f1)"
+    echo "      rknn_server:        $(du -sh $OUTPUT_DIR/bin/rknn_server 2>/dev/null | cut -f1)"
+    echo "      init.rknn_server.rc: $(du -sh $OUTPUT_DIR/etc/init.rknn_server.rc 2>/dev/null | cut -f1)"
+    echo ""
+    echo "    NPU capability: 0.8 TOPS (RK3566 RKNPU)"
+    echo "    RKNN2 version:  v1.6.0"
+    echo "    Supported ops:  Conv, DepthwiseConv, Dense, ReLU, Sigmoid, Softmax,"
+    echo "                    Pooling, Reshape, Concat, Add, and more"
+    echo ""
+    warning "rknn_server requires SELinux policy (u:r:rknn_server:s0)."
+    warning "Add sepolicy rules in Phase 4 before building."
+}
+
+
+
 # --- Main --------------------------------------------------------------------
 case "$COMMAND" in
     extract-dt)     extract_dt "$@" ;;
     extract-blobs)  extract_blobs "$@" ;;
+    npu-blobs)      npu_blobs "$@" ;;
     device-tree)    device_tree "$@" ;;
     *)
-        echo "Usage: $0 {extract-dt|extract-blobs|device-tree}"
+        echo "Usage: $0 {extract-dt|extract-blobs|npu-blobs|device-tree}"
         exit 1
         ;;
 esac
