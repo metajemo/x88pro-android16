@@ -12,17 +12,17 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 |---|---|
 | **Board** | X88PRO-RK3566-4D32-V1.0 |
 | **SoC** | Rockchip RK3566 (4x ARM Cortex-A55 @ 1.8GHz) |
-| **GPU** | ARM Mali-G52 2EE — OpenGL ES 3.2, Vulkan 1.1, OpenCL 2.0 |
-| **NPU** | Rockchip RKNPU — 0.8 TOPS (RKNN2 SDK, open source kernel driver) |
+| **GPU** | ARM Mali-G52 2EE (Bifrost) — OpenGL ES 3.2, Vulkan 1.1, OpenCL 2.0 |
+| **NPU** | Rockchip RKNPU — 0.8 TOPS (RKNN2 SDK) |
 | **RAM** | 8GB LPDDR4 |
 | **Storage** | 128GB eMMC 5.1 |
-| **Ethernet** | Gigabit (RTL8211,Synopsys GMAC, `stmmac` driver — mainline) |
-| **WiFi** | AMPAK AP6398S / Broadcom BCM43598 — WiFi 5, `brcmfmac` driver (mainline) |
-| **Bluetooth** | AMPAK AP6398S / Broadcom BCM43598 — BT 5.0, `btbcm` driver (mainline) |
+| **Ethernet** | Gigabit (Synopsys GMAC, `stmmac` driver — mainline) |
+| **WiFi** | AMPAK AP6398S / Broadcom BCM4359c0 — WiFi 5, **`bcmdhd` driver (out-of-tree)** |
+| **Bluetooth** | AMPAK AP6398S / Broadcom BCM4359c0 — BT 5.0, `btbcm` driver (mainline) |
 | **Video out** | HDMI 2.0 (4K@60fps) |
 | **Video decode** | H.264/H.265/VP9 up to 4K@60fps via Rockchip MPP (no AV1, no HDR) |
 | **Video encode** | H.264/H.265 up to 1080p@60fps via Rockchip MPP |
-| **Audio** | HDMI PCM stereo (no DD/DTS passthrough), SPDIF |
+| **Audio** | HDMI PCM stereo (no DD/DTS passthrough) |
 | **USB** | 3x USB-A + 1x USB-C OTG |
 | **Stock OS** | Android 11 (kernel 4.19.172, `userdebug` build) |
 
@@ -35,19 +35,25 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | CPU / RAM / Storage | ✅ Full | Mainline kernel |
 | Ethernet | ✅ Full | `stmmac` driver, mainline |
 | USB | ✅ Full | XHCI/DWC3, mainline |
-| HDMI output | ✅ Full | Via Rockchip BSP kernel 5.10 |
-| WiFi | 🔧 Expected | `brcmfmac` mainline + firmware blobs |
-| Bluetooth | 🔧 Expected | `btbcm` mainline + firmware blobs |
-| GPU | 🔧 Expected | libmali blob from vendor partition |
-| Video decode (H.264/H.265/VP9) | 🔧 Expected | Rockchip MPP library |
-| Video encode | 🔧 Expected | Rockchip MPP library |
-| NPU | 🔧 Expected | RKNPU kernel driver + RKNN2 SDK |
+| HDMI output | ✅ Full | Via Rockchip BSP kernel 5.10 (VOP2) |
+| HDMI CEC | 🔧 Expected | `hdmi_cec.rk356x.so` confirmed in vendor |
+| WiFi | 🔧 Required | `bcmdhd.ko` (out-of-tree) + `fw_bcm4359c0_ag*.bin` firmware |
+| Bluetooth | 🔧 Required | `btbcm` mainline + `BCM4359C0.hcd` firmware |
+| GPU | 🔧 Required | `libGLES_mali.so` blob + gralloc bifrost HAL |
+| Vulkan 1.1 | 🔧 Required | `vulkan.rk356x.so` blob |
+| Video decode (H.264/H.265/VP9) | 🔧 Required | `libmpp.so` + BSP kernel (rkvdec2) |
+| Video encode | 🔧 Required | `libmpp.so` + OMX wrappers |
+| NPU | 🔧 Required | RKNPU kernel driver + RKNN2 v1.6.0 runtime |
 | HDMI audio (PCM) | 🔧 Expected | Stereo PCM only |
-| HDMI CEC | 🔧 Likely | TV compatibility dependent |
 | IR remote | 🔧 Likely | Needs DTS key mapping config |
 | HDMI audio passthrough | ❌ Not possible | Hardware limitation |
 | AV1 decode | ❌ Not possible | RK3566 VPU hardware limitation |
 | HDR display | ❌ Not possible | RK3566 hardware limitation |
+
+> ⚠️ **WiFi driver note:** Despite the AP6398S having mainline `brcmfmac` support,
+> the X88 Pro BSP uses Broadcom's proprietary `bcmdhd` out-of-tree driver.
+> `bcmdhd.ko` must be compiled against the BSP kernel. See
+> [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for details.
 
 See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for full research details.
 
@@ -59,7 +65,7 @@ See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for f
 |---|---|---|
 | Phase 1 | Device extraction & backup | ✅ Complete |
 | Phase 2 | Build environment setup | ✅ Complete |
-| Phase 3 | Device tree & vendor blobs | 🚧 In progress |
+| Phase 3 | Device tree & vendor blobs | ✅ Complete |
 | Phase 4 | Android 16 build | ⏳ Pending |
 | Phase 5 | Flash & verify | ⏳ Pending |
 
@@ -91,18 +97,15 @@ See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for f
 
 ```bash
 # Clone this repo
-git clone https://github.com/YOUR_USERNAME/x88pro-android16.git
+git clone https://github.com/emiliyan.paunov/x88pro-android16.git
 cd x88pro-android16
 
 # Run extraction (replace IP with your box's IP address)
-make phase1 BOX_IP=192.168.1.105
-
-# Or run the script directly
-chmod +x scripts/phase1_extraction.sh
-./scripts/phase1_extraction.sh 192.168.1.105
+./scripts/phase1_extraction.sh 192.168.1.x
 ```
 
 Expected result: a `backup/` folder containing:
+
 ```
 backup/
 ├── boot.img            (64MB)  - Original kernel
@@ -126,50 +129,77 @@ backup/
 
 ```bash
 # Install all dependencies and sync AOSP source
-make phase2
+./scripts/phase2_environment.sh
 
-# Or step by step:
-make phase2-deps    # Install Ubuntu packages
-make phase2-repo    # Install repo tool
-make phase2-sync    # Sync AOSP (~100GB, takes hours)
+# Verify environment is ready
+./scripts/phase2_environment.sh verify
 ```
+
+Key facts about the build environment:
+- AOSP branch: `android-16.0.0_r1` (stable Android 16, release `BP2A.250605.031.A2`)
+- Java: must be version 17 (script pins this via `update-alternatives`)
+- ccache: configured at 50GB (re-run after reboot to restore)
+- Lunch target: `aosp_x88pro-bp2a-eng`
 
 ---
 
 ### Phase 3 — Prepare device tree and vendor blobs
 
 ```bash
-make phase3
+# Extract device tree from boot.img
+./scripts/phase3_device_prep.sh extract-dt backup/boot.img
+
+# Extract vendor blobs from super.img
+./scripts/phase3_device_prep.sh extract-blobs backup/super.img \
+    device/rockchip/x88pro/proprietary
+
+# Download RKNN2 NPU runtime (v1.6.0)
+./scripts/phase3_device_prep.sh npu-blobs \
+    device/rockchip/x88pro/proprietary
 ```
 
-This will:
-- Convert the binary device tree blob (DTB) back to human-readable DTS source
-- Extract proprietary vendor blobs from super.img:
-  - `libmali.so` — Mali-G52 GPU driver
-  - `librockchip_mpp.so` — Hardware video decode/encode
-  - WiFi/BT firmware (AP6398S / BCM43598)
-- Download RKNN2 NPU runtime from Rockchip's official SDK
-- Generate a proper Android 16 device tree for the X88 Pro
+This extracts and sets up:
+
+**GPU (Mali-G52 Bifrost):**
+- `libGLES_mali.so` — OpenGL ES 3.2 + OpenCL 2.0 driver (~38MB)
+- `vulkan.rk356x.so` — Vulkan 1.1 driver
+- `hwcomposer.rk30board.so` — Hardware Composer HAL
+- gralloc bifrost allocator + mapper HALs
+
+**Video (Rockchip MPP):**
+- `libmpp.so` — Hardware H.264/H.265/VP9 decode/encode (~6.3MB)
+- `librga.so` — 2D acceleration (scaling, rotation, color conversion)
+
+**WiFi (AP6398S / BCM4359c0):**
+- `bcmdhd.ko` — WiFi kernel module (out-of-tree, must build against BSP kernel)
+- `fw_bcm4359c0_ag*.bin` — WiFi firmware (STA / AP / P2P modes)
+- `nvram_ap6398s.txt` — RF calibration data
+
+**Bluetooth (AP6398S / BCM4359c0):**
+- `BCM4359C0.hcd` — BT 5.0 init firmware
+
+**NPU (RKNPU / RKNN2):**
+- `librknnrt.so` — RKNN2 v1.6.0 inference runtime (~5.9MB)
+- `rknn_server` — NPU inference server daemon
+
+> **Note on WiFi driver:** The X88 Pro uses Broadcom's proprietary `bcmdhd`
+> out-of-tree driver, NOT the mainline `brcmfmac`. This was discovered during
+> Phase 3 blob extraction. `bcmdhd.ko` must be compiled against the BSP kernel.
 
 > **Note on video decode:** The RK3566 uses `rkvdec2` which has no mainline
-> kernel driver yet. We use Rockchip's BSP kernel with their MPP library
-> for hardware accelerated H.264/H.265/VP9 decode. AV1 is not supported
-> by the RK3566 hardware.
+> kernel driver. We use the Rockchip BSP kernel 5.10 with `libmpp.so` for
+> hardware accelerated H.264/H.265/VP9. AV1 is not supported by the hardware.
 
-> **Note on GPU:** We use Rockchip's proprietary `libmali` blob for the
-> Mali-G52 GPU as Android's graphics stack requires it. The open source
-> Panfrost driver is not compatible with Android's gralloc HAL.
+> **Note on firmware paths:** `bcmdhd` uses generic paths at the kernel config
+> level (`fw_bcmdhd.bin`, `nvram.txt`). Our build creates symlinks to the actual
+> AP6398S firmware files at those paths.
+
+---
 
 ### Phase 4 — Build Android 16
 
 ```bash
-# Full build (takes several hours)
-make phase4
-
-# Or build components separately:
-make phase4-setup   # Configure lunch target
-make phase4-kernel  # Build kernel (~30-60 min)
-make phase4-aosp    # Build AOSP (~3-8 hours depending on hardware)
+# TODO: Phase 4 scripts coming soon
 ```
 
 ---
@@ -177,7 +207,7 @@ make phase4-aosp    # Build AOSP (~3-8 hours depending on hardware)
 ### Phase 5 — Flash to device
 
 ```bash
-make phase5 BOX_IP=192.168.1.105
+# TODO: Phase 5 scripts coming soon
 ```
 
 > ⚠️ **Warning:** This replaces Android 11 with Android 16. Make sure Phase 1
@@ -190,7 +220,7 @@ make phase5 BOX_IP=192.168.1.105
 If anything goes wrong, you can restore the original firmware using the Phase 1 backup:
 
 ```bash
-# TODO: restore script (phase5_restore.sh) - coming soon
+# TODO: restore script coming soon
 ```
 
 ---
@@ -201,7 +231,7 @@ If anything goes wrong, you can restore the original firmware using the Phase 1 
 2. Tap **Build Number** 7 times to enable Developer Options
 3. Go to **Settings → Developer Options**
 4. Enable **USB Debugging**
-5. Enable **ADB over Network** (or "Wireless Debugging")
+5. Enable **ADB over Network** (or connect via USB)
 6. Note the IP address from **Settings → Network**
 
 ---
@@ -216,21 +246,33 @@ x88pro-android16/
 │   ├── phase1_extraction.sh        # ADB extraction script
 │   ├── phase2_environment.sh       # Build environment setup
 │   ├── phase3_device_prep.sh       # Device tree + blob extraction
-│   ├── phase4_build.sh             # AOSP build script
-│   └── phase5_flash.sh             # Flashing script
+│   │                               #   extract-dt    - extract DTS from boot.img
+│   │                               #   extract-blobs - extract vendor blobs
+│   │                               #   npu-blobs     - download RKNN2 runtime
+│   ├── phase4_build.sh             # AOSP + BSP kernel build (pending)
+│   └── phase5_flash.sh             # Flash + verify + restore (pending)
 ├── device/
 │   └── rockchip/
 │       └── x88pro/
-│           ├── device.mk           # Device configuration
-│           ├── BoardConfig.mk      # Board-level build config
-│           ├── AndroidProducts.mk  # Product definition
-│           └── proprietary/        # Vendor blobs (not in git)
+│           ├── AndroidProducts.mk  # Declares aosp_x88pro lunch target
+│           ├── BoardConfig.mk      # Board config (partitions, kernel, WiFi)
+│           ├── device.mk           # Build recipe (blobs, props, permissions)
+│           ├── kernel-config-stock.txt  # Stock kernel config (Phase 1 ref)
+│           ├── dts/
+│           │   ├── rk3566-x88pro.dts           # Our device tree source
+│           │   └── rk3566-x88pro-decompiled.dts.ref  # Decompiled reference
+│           └── proprietary/        # Vendor blobs (NOT in git - extract locally)
+│               ├── lib64/          # GPU, MPP, RGA, RKNN2 libraries
+│               ├── modules/        # bcmdhd.ko WiFi kernel module
+│               ├── firmware/       # WiFi + BT firmware blobs
+│               ├── bin/            # rknn_server daemon
+│               └── etc/            # HAL configs, init scripts
 ├── kernel/
-│   └── configs/                    # Kernel config fragments
+│   └── rockchip-bsp/               # BSP kernel (not in git - cloned by script)
+│       └── ...                     # github.com/rockchip-linux/kernel develop-5.10
 └── docs/
-    ├── HARDWARE.md                 # Detailed hardware documentation
-    ├── PARTITIONS.md               # Partition layout reference
-    └── TROUBLESHOOTING.md          # Common issues and fixes
+    ├── HARDWARE.md                 # Hardware specs and partition layout
+    └── HARDWARE_SUPPORT_ANALYSIS.md # Per-component support status + research
 ```
 
 ---
@@ -244,12 +286,13 @@ This is a community project and contributions are very welcome!
 - Improve device tree entries
 - Write documentation
 - Help identify vendor blobs
-- Port drivers from other RK3566 projects (Radxa Rock 3, Pine64 Quartz64)
+- Port drivers from other RK3566 projects
 
 **Related projects that helped:**
 - [Rockchip Linux](https://github.com/rockchip-linux) — Official Rockchip kernel and manifests
 - [Radxa Rock 3](https://github.com/radxa) — Another RK3566 board with good community support
 - [LibreELEC RK356x](https://github.com/LibreELEC/LibreELEC.tv) — Linux for RK356x boxes
+- [rknn-toolkit2](https://github.com/rockchip-linux/rknn-toolkit2) — RKNN2 NPU SDK
 
 ---
 
@@ -258,7 +301,11 @@ This is a community project and contributions are very welcome!
 Build scripts and device configuration files in this repository are released under the **Apache License 2.0**.
 
 Android Open Source Project (AOSP) components are subject to their own licenses.
-Proprietary vendor blobs extracted from the device are owned by Rockchip and their respective vendors — they are **not** included in this repository and must be extracted from your own device using the Phase 1 script.
+
+Proprietary vendor blobs extracted from the device are owned by Rockchip, ARM, and Broadcom
+respectively — they are **not** included in this repository and must be extracted from your
+own device using the Phase 3 script. You already own a license to run these blobs by virtue
+of having purchased the device.
 
 ---
 
@@ -269,4 +316,5 @@ This is an unofficial community project. It is not affiliated with or endorsed b
 - The X88 Pro manufacturer
 - Google / Android Open Source Project
 
-Flashing custom firmware may void your warranty. The authors are not responsible for bricked devices. Always keep your Phase 1 backup!
+Flashing custom firmware may void your warranty. The authors are not responsible
+for bricked devices. Always keep your Phase 1 backup!
