@@ -1,286 +1,410 @@
-# X88 Pro Hardware Support Analysis for Android 16
+# X88 Pro Hardware Support Analysis
 
-Research-based assessment of every hardware component and its expected
-support status in our Android 16 build. Updated based on latest community
-and upstream kernel research (March 2026).
+Hardware: X88PRO-RK3566-4D32-V1.0  
+SoC: Rockchip RK3566 (4x Cortex-A55 @ 1.8GHz, Mali-G52 2EE, RKNPU 0.8 TOPS)  
+RAM: 8GB LPDDR4  
+Storage: 128GB eMMC  
+Stock OS: Android 11 (SDK 30, kernel 4.19.172)
 
 ---
 
-## Summary Table
+## Quick Reference Table
 
-| Component | Chip/Driver | Android 16 Status | Source |
+| Component | Driver / Blob | Status | Notes |
 |---|---|---|---|
-| CPU | Cortex-A55 / mainline | ✅ Full support | Mainline kernel |
-| RAM / eMMC | LPDDR4 / eMMC 5.1 | ✅ Full support | Mainline kernel |
-| Ethernet | GMAC / stmmac | ✅ Full support | Mainline kernel |
-| USB | XHCI / dwc3 | ✅ Full support | Mainline kernel |
-| HDMI output | VOP2 / dw-hdmi | ✅ Works via BSP kernel | Rockchip BSP |
-| HDMI audio | dw-hdmi-audio | 🔧 PCM only, no passthrough | LibreELEC community |
-| HDMI CEC | dw-hdmi-cec | 🔧 Should work, untested | LibreELEC community |
-| GPU | Mali-G52 / libmali | 🔧 Blob works, Panfrost alternative | Rockchip libmali |
-| WiFi | AP6398S / bcmdhd | 🔧 (out-of-tree) + firmware blobs |  Not mainline brcmfmac |
-| Bluetooth | AP6398S / btbcm | 🔧 Mainline driver + firmware blobs | Mainline kernel |
-| Video decode | RKVDEC2 / MPP | 🔧 Via Rockchip MPP (BSP kernel) | Rockchip MPP |
-| Video encode | RKVENC / MPP | 🔧 1080p60, via Rockchip MPP | Rockchip MPP |
-| NPU | RKNPU / RKNN2 | 🔧 Open source kernel driver + RKNN2 SDK | Rockchip RKNN2 |
-| IR remote | SARADC / gpio-keys | 🔧 Likely works, needs DTS config | Device tree |
-| Audio (HDMI) | dw-hdmi-audio | 🔧 PCM only | LibreELEC community |
-| Audio (SPDIF) | rk-spdif | 🔧 Driver exists, needs config | Rockchip BSP |
-| AV1 decode | — | ❌ Not supported by RK3566 VPU | Hardware limitation |
-| HDR | — | ❌ Not supported by RK3566 | Hardware limitation |
-| HDMI audio passthrough | — | ❌ DD/DTS passthrough not available | LibreELEC community |
+| CPU (4x Cortex-A55) | mainline | ✅ Full | ARM64, all 4 cores |
+| RAM (8GB LPDDR4) | mainline | ✅ Full | ~7.5GB usable |
+| eMMC (128GB) | mainline | ✅ Full | mmcblk2 |
+| USB 2.0/3.0 | mainline | ✅ Full | Host + OTG |
+| SD card slot | `dw_mmc` (mainline) | ✅ Full | `fe2b0000.dwmmc`, vold managed, auto-format |
+| Ethernet (GMAC) | stmmac (mainline) | ✅ Full | Gigabit, `snps,dwmac-4.20a` |
+| HDMI output | BSP kernel VOP2 | ✅ Via BSP | Requires Rockchip BSP kernel 5.10 |
+| HDMI CEC | dw-hdmi-cec + `hdmi_cec.rk356x.so` | ✅ Confirmed | Blob confirmed in vendor partition |
+| HDMI audio | dw-hdmi-audio | ⚠️ Partial | PCM stereo only — no DD/DTS passthrough |
+| GPU Mali-G52 | libmali blob (Bifrost) | 🔧 Blob required | `libGLES_mali.so` + gralloc bifrost HAL |
+| Vulkan 1.1 | libmali blob | 🔧 Blob required | `vulkan.rk356x.so` confirmed |
+| OpenCL 2.0 | libmali blob | 🔧 Blob required | Via `libGLES_mali.so` |
+| HWComposer | `hwcomposer.rk30board.so` | 🔧 Blob required | Display composition HAL |
+| WiFi (AP6398S) | **bcmdhd (out-of-tree!)** | 🔧 Blob + module | NOT brcmfmac — see WiFi section |
+| Bluetooth (AP6398S) | btbcm (mainline) | 🔧 Firmware blob | BT 5.0, `BCM4359C0.hcd` confirmed |
+| Video decode H264/H265/VP9 | Rockchip MPP (BSP) | 🔧 Blob + BSP | `libmpp.so` — rkvdec2 no mainline driver |
+| Video encode H264/H265 | Rockchip MPP (BSP) | 🔧 Blob + BSP | `libomxvpu_enc.so` |
+| 2D acceleration | `librga.so` | 🔧 Blob required | RGA scaling/rotation/color conversion |
+| Audio output | `audio.primary.rk30board.so` | 🔧 Blob required | HDMI PCM stereo |
+| USB audio | `audio.usb.default.so` | 🔧 Blob required | USB DAC/headset support |
+| Keymaster / Security | OP-TEE (TrustZone) | 🔧 Blob required | Keymaster 4.0 via `trust.img` BL32 |
+| Gatekeeper | OP-TEE (TrustZone) | 🔧 Blob required | Screen lock backed by TrustZone |
+| Widevine DRM | L3 software DRM | ⚠️ L3 only | Streaming works — SD quality for DRM content |
+| NPU (RKNPU 0.8 TOPS) | RKNN2 v1.6.0 | 🔧 RKNN2 only | Android 11 RKNN v1 blobs incompatible |
+| Power management | `power-service.rockchip` | 🔧 Blob required | CPU scaling, thermal management |
+| Lights / LED | `lights-service.rockchip` | 🔧 Blob required | Power indicator LED |
+| Health HAL | `android.hardware.health@2.0-impl` | 🔧 Blob required | Battery/power state reporting |
+| Memory tracking | `memtrack.rk356x.so` | 🔧 Blob required | `adb shell dumpsys meminfo` |
+| Neural Networks HAL | `rockchip.hardware.neuralnetworks` | 🔧 Blob required | Android NNAPI → RKNPU bridge |
+| AV1 decode | — | ❌ Not supported | RK3566 hardware limitation |
+| HDR display | — | ❌ Not supported | RK3566 hardware limitation |
+| Audio passthrough | — | ❌ Not supported | Hardware limitation (PCM only) |
+| Widevine L1 | — | ❌ Not supported | No secure video path on this hardware |
+
+**Legend:** ✅ Works | ⚠️ Partial | 🔧 Requires proprietary blob/BSP | ❌ Not possible
 
 ---
 
-## Detailed Analysis Per Component
+## Component Details
 
-### ✅ CPU — ARM Cortex-A55 (Full support)
-Four Cortex-A55 cores are fully supported in mainline Linux and Android.
-No action needed beyond standard kernel config.
+### CPU / RAM / Storage / USB / Ethernet
+Fully supported by mainline Linux and AOSP. No special configuration needed.
 
-**Android 16 impact:** None — works out of the box.
-
----
-
-### ✅ Ethernet — Synopsys GMAC (Full support)
-The `stmmac` driver for Synopsys GMAC (`snps,dwmac-4.20a`) is fully
-mainlined and very well tested. Our DTS node `ethernet@fe010000` with
-compatible `rockchip,rk3568-gmac` is supported.
-
-**Android 16 impact:** None — works out of the box with correct DTS.
+- CPU: 4x ARM Cortex-A55 @ 1.8GHz, ARMv8-A, 39-bit VA, 4K pages
+- RAM: 8GB LPDDR4 (confirmed via ADB: MemTotal 7860196 kB)
+- eMMC: 128GB (mmcblk2, confirmed partition layout in Phase 1)
+- Ethernet: Synopsys GMAC (`snps,dwmac-4.20a`), `stmmac` mainline driver, Gigabit
 
 ---
 
-### ✅ USB — XHCI / DWC3 (Full support)
-Standard USB controllers fully supported in mainline Linux and Android.
-Multiple USB host controllers and OTG are present in the device tree.
+### GPU: Mali-G52 2EE (Bifrost architecture)
 
-**Android 16 impact:** None — works out of the box.
+**Status: 🔧 Proprietary blob required**
 
----
+The Mali-G52 is a Bifrost-architecture GPU. Android requires ARM's proprietary
+libmali blob — open source Panfrost is not compatible with Android's gralloc HAL.
 
-### 🔧 HDMI Output — VOP2 / dw-hdmi (Works via BSP kernel)
-HDMI output works well via Rockchip's BSP kernel (5.10). We will use
-the BSP kernel rather than mainline for our Android 16 build, which is
-standard practice for Android on Rockchip devices.
+**Confirmed blobs extracted from Phase 3:**
 
-**Key finding:** The LibreELEC community has confirmed HDMI output working
-on RK3566 with the BSP kernel. The VOP2 display controller and dw-hdmi
-driver are both included in Rockchip's BSP kernel tree.
+| Blob | Size | Purpose |
+|---|---|---|
+| `lib64/egl/libGLES_mali.so` | ~38MB | Main driver (OpenGL ES 3.2, OpenCL 2.0) |
+| `lib64/hw/vulkan.rk356x.so` | ~38MB | Vulkan 1.1 ICD |
+| `lib64/hw/hwcomposer.rk30board.so` | ~1MB | Hardware Composer HAL |
+| `lib64/hw/hw_output.default.so` | varies | Display output manager |
+| `lib64/hw/rockchip.hardware.outputmanager@1.0-impl.so` | varies | Rockchip output manager HAL |
+| `lib64/hw/android.hardware.graphics.allocator@4.0-impl-bifrost.so` | ~70KB | gralloc allocator |
+| `lib64/hw/android.hardware.graphics.mapper@4.0-impl-bifrost.so` | ~140KB | gralloc mapper |
+| `lib64/libdrm.so` | varies | DRM (Direct Rendering Manager) library |
+| `lib64/libbaseparameter.so` | varies | Rockchip display calibration parameters |
 
-**Android 16 impact:** Need to use Rockchip BSP kernel 5.10 (not mainline).
-This is already our plan — AOSP Android 16 with Rockchip's BSP kernel.
+The `bifrost` suffix in the gralloc HAL confirms Mali-G52 belongs to the Bifrost
+GPU family (G51, G52, G71, G72, G76).
 
----
-
-### 🔧 HDMI Audio (PCM only, no passthrough)
-HDMI audio works but with important limitations confirmed by the LibreELEC
-community who have tested this exact hardware:
-- **PCM stereo audio:** ✅ Works
-- **Dolby Digital (DD) passthrough:** ❌ Not available
-- **DTS passthrough:** ❌ Not available
-- **Multi-channel LPCM:** Unknown
-
-**Android 16 impact:** Standard stereo audio will work. Users expecting
-Dolby/DTS passthrough for a home theater setup will be disappointed.
-This is a known hardware/driver limitation, not something we can fix in
-the build.
-
-**Phase 3 action:** Configure HDMI audio HAL for PCM output only.
+**Important:** libmali version must match the BSP kernel's Mali driver version.
+Version mismatch causes black screen or rendering glitches.
 
 ---
 
-### 🔧 HDMI CEC (Should work)
-The `dw-hdmi-cec` driver supports Consumer Electronics Control (CEC),
-which allows TV remotes to control the box. The LibreELEC community
-reports CEC should work on RK3566 devices, though it's sensitive to
-TV compatibility and HDMI cable quality.
+### HDMI
 
-**Android 16 impact:** Standard Android TV CEC functionality should work.
-Worth testing after initial boot — if it doesn't work it's likely a DTS
-configuration issue.
+**Output: ✅ Via BSP kernel**  
+**CEC: ✅ Confirmed**  
+**Audio: ⚠️ PCM stereo only**
 
----
+HDMI output requires the Rockchip BSP kernel for VOP2 (Video Output Processor 2).
 
-### 🔧 GPU — Mali-G52 / libmali blob (Works with blob)
-The Mali-G52 GPU has two driver options:
+HDMI CEC confirmed via `hdmi_cec.rk356x.so` and `android.hardware.tv.cec@1.0-impl.so`
+in the vendor partition. Allows TV remote to control the box.
 
-**Option 1 — libmali blob (recommended for Android):**
-Rockchip provides a proprietary `libmali` userspace driver that supports:
-- OpenGL ES 1.1 / 2.0 / 3.2
-- OpenCL 2.0
-- Vulkan 1.1
-
-This is what Android expects and what we extract from the Android 11
-vendor partition. Android's graphics stack (gralloc, HWC) is designed
-to work with the Mali blob.
-
-**Option 2 — Panfrost (open source, Linux-oriented):**
-The open source Panfrost driver works on Mali-G52 but is primarily
-designed for Linux desktop (DRM/KMS). Getting it working with Android's
-graphics stack is significantly more complex and not recommended for
-our initial build.
-
-**Key finding:** libmali version compatibility matters. The Mali-G52
-requires specific libmali variants (`g13p0` or `g2p0`). Version mismatches
-cause boot failures or rendering glitches. We should verify the exact
-libmali version from our Android 11 extraction.
-
-**Android 16 impact:** Use libmali blob from Android 11 vendor partition.
-May need to source a newer libmali version if Android 11 blob is
-incompatible with Android 16 gralloc HAL.
-
-**Phase 3 action:** Extract and verify libmali version. Source updated
-blob from Rockchip's libmali repository if needed.
+HDMI audio: PCM stereo only. Dolby Digital / DTS bitstream passthrough is a
+hardware limitation of this board's audio path — cannot be fixed in software.
 
 ---
 
-### 🔧 WiFi — AMPAK AP6398S / brcmfmac (Mainline driver, needs firmware)
-The `brcmfmac` driver for Broadcom/AMPAK WiFi modules is fully mainlined.
+### Audio
 
-**What works:**
-- Driver: `brcmfmac` in mainline kernel ✅
-- WiFi 5 (802.11ac) connectivity ✅
-- Hotspot (AP) mode ✅
+**Status: 🔧 Proprietary blob required**
 
-**What we need to provide:**
-- `fw_bcm43598a3.bin` — STA firmware
-- `fw_bcm43598a3_apsta.bin` — AP firmware
-- `nvram_ap6398s.txt` — board-specific calibration data
+| Blob | Purpose |
+|---|---|
+| `lib64/hw/audio.primary.rk30board.so` | Primary HDMI audio HAL |
+| `lib64/hw/audio.r_submix.default.so` | Remote submix (screen recording audio) |
+| `lib64/hw/audio.usb.default.so` | USB audio devices (DAC, headset) |
+| `lib64/hw/android.hardware.audio@6.0-impl.so` | Audio HIDL HAL |
+| `lib64/hw/android.hardware.audio.effect@6.0-impl.so` | Audio effects HAL |
 
-These are extracted from our Android 11 vendor partition in Phase 3.
+---
 
-**Android 16 impact:** WiFi should work after placing firmware files in
-the correct vendor firmware path.
+### WiFi: AMPAK AP6398S (BCM4359c0)
 
+**Status: 🔧 Out-of-tree kernel module + firmware blobs required**
+
+> ⚠️ **IMPORTANT CORRECTION (discovered Phase 3):**
+> This device uses Broadcom's proprietary `bcmdhd` out-of-tree driver,
+> NOT the `brcmfmac` mainline driver. Confirmed by finding `bcmdhd.ko`
+> in `/vendor/lib/modules/` and kernel config `CONFIG_BCMDHD=y`.
+
+**Chip identification:**
+- Module: AMPAK AP6398S
+- Silicon: BCM43598 (marketing) = BCM4359 revision c0
+- WiFi 5 (802.11ac), dual-band 2.4GHz + 5GHz
+
+**Kernel config (extracted from stock boot.img):**
 ```
-**IMPORTANT correction discovered during Phase 3 blob extraction:**
-Despite the AP6398S having brcmfmac mainline support, this specific
-X88 Pro BSP uses Broadcom's proprietary bcmdhd out-of-tree driver.
-The bcmdhd.ko kernel module must be compiled against the BSP kernel
-and included as a vendor module. This means WiFi requires:
-  - bcmdhd.ko built from BSP kernel source
-  - fw_bcm4359c0_ag*.bin firmware files (in /vendor/etc/firmware/)
-  - nvram_ap6398s.txt calibration data
+CONFIG_BCMDHD=y
+CONFIG_BCMDHD_FW_PATH="/vendor/etc/firmware/fw_bcmdhd.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/vendor/etc/firmware/nvram.txt"
+```
+
+**Required files:**
+
+| File | Location | Purpose |
+|---|---|---|
+| `bcmdhd.ko` | `vendor/lib/modules/` | WiFi kernel module |
+| `fw_bcm4359c0_ag.bin` | `vendor/etc/firmware/` | STA firmware |
+| `fw_bcm4359c0_ag_apsta.bin` | `vendor/etc/firmware/` | AP/hotspot firmware |
+| `fw_bcm4359c0_ag_p2p.bin` | `vendor/etc/firmware/` | P2P/WiFi Direct firmware |
+| `nvram_ap6398s.txt` | `vendor/etc/firmware/` | RF calibration |
+
+**Firmware symlinks required** (bcmdhd uses generic paths):
+```
+/vendor/etc/firmware/fw_bcmdhd.bin     → fw_bcm4359c0_ag.bin
+/vendor/etc/firmware/fw_bcmdhd_apsta.bin → fw_bcm4359c0_ag_apsta.bin
+/vendor/etc/firmware/nvram.txt          → nvram_ap6398s.txt
 ```
 
 ---
 
-### 🔧 Bluetooth — AMPAK AP6398S / btbcm (Mainline driver, needs firmware)
-Same chip as WiFi (BCM43598). Bluetooth 5.0 via UART interface.
+### Bluetooth: AMPAK AP6398S (BCM4359c0) BT 5.0
 
-**What we need:**
-- `BCM43598A3.hcd` — BT firmware file (from Android 11 vendor)
-- Correct UART configuration in device tree
+**Status: 🔧 Firmware blob required**
 
-**Android 16 impact:** BT should work after placing firmware in correct path.
+Uses `btbcm` mainline kernel driver. BT 5.0 confirmed via `BCM4359C0.hcd`.
 
----
-
-### 🔧 Hardware Video Decode — RKVDEC2 / Rockchip MPP
-This is one of the more complex components. The RK3566 uses the second
-generation Rockchip video decoder called **rkvdec2**.
-
-**Critical finding:** There is NO mainline Linux kernel driver for rkvdec2.
-The mainline rkvdec driver only covers the first generation (RK3399/RK3328).
-Collabora is working on VDPU346 support for RK356X but it's not merged yet.
-
-**Supported codecs via Rockchip MPP (BSP kernel):**
-- H.264: ✅ Up to 4K@60fps
-- H.265 (HEVC): ✅ Up to 4K@60fps
-- VP9: ✅ Up to 4K@60fps
-- AV1: ❌ NOT supported by RK3566 hardware
-- 10-bit (HDR): ⚠️ Decode works but HDR tone-mapping not supported
-
-**Approach:** Use Rockchip's BSP kernel (5.10) with MPP library.
-Rockchip MPP explicitly supports RK3566/RK3568 and is the standard
-approach for Android video acceleration on this SoC.
-
-**Android 16 impact:** Video decode requires Rockchip MPP library
-(`librockchip_mpp.so`) and BSP kernel. Extract from Android 11 vendor
-partition and include in our build.
-
-**Phase 3 action:** Extract MPP library from vendor partition. Add MPP
-HAL configuration to device tree.
-
----
-
-### 🔧 Hardware Video Encode — RKVENC / Rockchip MPP
-H.264 and H.265 encoding up to 1080p@60fps via RKVENC hardware.
-Also handled by Rockchip MPP library.
-
-**Android 16 impact:** Same as video decode — needs MPP library.
-Encoding is less critical for a TV box (primarily used for recording).
-
----
-
-### 🔧 NPU — Rockchip RKNPU / RKNN2 (Open source kernel driver)
-As researched previously:
-- Kernel driver (`rknpu`): Open source, in Rockchip kernel tree ✅
-- Runtime: RKNN2 SDK (`librknnrt.so`) — sourced from Rockchip GitHub
-- Android HAL interfaces: Compatible with Android 16 standard HALs
-
-**Phase 3 action:** Download RKNN2 runtime via `phase3-npu-blobs` target.
-
----
-
-### 🔧 IR Remote Control (Likely works, needs DTS config)
-The device tree shows `adc-keys` and `saradc@fe720000` which suggests
-IR input is handled via ADC-connected buttons or a dedicated IR receiver.
-
-**Android 16 impact:** Standard Android remote control functionality
-should work with correct DTS configuration. The exact IR receiver chip
-needs to be identified from the PCB or device tree.
-
-**Phase 3 action:** Examine `adc-keys` device tree node for key mappings.
-Configure Android key layout file for the remote control.
-
----
-
-### ❌ AV1 Decode (Hardware limitation — not fixable)
-The RK3566 VPU does not support AV1 hardware decode. This is a chip
-hardware limitation. AV1 content can still play via software decode
-but will use significant CPU resources.
-
-**Android 16 impact:** YouTube and other streaming services increasingly
-use AV1. Performance on AV1 content will be poor (software decode only).
-
----
-
-### ❌ HDR (Hardware limitation — not fixable)
-The RK3566 does not support HDR10 or Dolby Vision display output.
-HDR content will be tone-mapped to SDR automatically.
-
-**Android 16 impact:** Content will play but without HDR color quality.
-
----
-
-## Phase Impact Summary
-
-### Phase 3 additions needed:
-
-| Addition | Why |
+| Blob | Purpose |
 |---|---|
-| Extract `librockchip_mpp.so` from vendor | Hardware video decode/encode |
-| Extract `libmali.so` and verify version | GPU rendering |
-| Verify libmali version compatibility | Prevent boot/render failures |
-| Add MPP HAL config to device tree | Video acceleration |
-| Configure `adc-keys` DTS node | IR remote control |
-| Configure HDMI audio for PCM only | Audio output |
-| Download RKNN2 runtime | NPU support |
+| `BCM4359C0.hcd` | BT controller init firmware |
+| `lib64/hw/android.hardware.bluetooth@1.0-impl.so` | BT HAL implementation |
+| `lib64/libbt-vendor.so` | BT vendor library |
 
-### Phase 4 additions needed:
+---
 
-| Addition | Why |
+### Video Decode/Encode: Rockchip MPP
+
+**Status: 🔧 Proprietary blob + BSP kernel required**
+
+The RK3566 uses `rkvdec2` — **no mainline kernel driver exists**. BSP kernel 5.10 required.
+
+| Blob | Size | Purpose |
+|---|---|---|
+| `lib64/libmpp.so` | ~6.3MB | MPP main library |
+| `lib64/libomxvpu_dec.so` | varies | OMX decode wrapper |
+| `lib64/libomxvpu_enc.so` | varies | OMX encode wrapper |
+| `lib64/librga.so` | ~112KB | 2D acceleration |
+
+**Supported codecs:**
+
+| Codec | Decode | Encode | Max |
+|---|---|---|---|
+| H.264 | ✅ Hardware | ✅ Hardware | 4K@60fps / 1080p@60fps |
+| H.265 | ✅ Hardware | ✅ Hardware | 4K@60fps / 1080p@60fps |
+| VP9 | ✅ Hardware | ❌ | 4K@60fps |
+| AV1 | ❌ | ❌ | Hardware limitation |
+
+---
+
+### Security: Keymaster 4.0 + Gatekeeper (OP-TEE)
+
+**Status: 🔧 Proprietary blobs required**
+
+The RK3566 uses OP-TEE (Open Portable Trusted Execution Environment) running
+in TrustZone (ARM Secure World) for hardware-backed security operations.
+
+OP-TEE is loaded as BL32 in `trust.img` during early boot — this is why
+`trust.img` must be preserved from the original device.
+
+**What this enables:**
+- Screen lock with hardware-backed credential storage
+- Encrypted storage (FDE/FBE)
+- App key attestation
+- Basic SafetyNet (without Play Integrity certification)
+
+| Blob | Purpose |
 |---|---|
-| Use Rockchip BSP kernel 5.10 (not mainline) | HDMI, video decode, GPU |
-| Enable `brcmfmac` in kernel config | WiFi |
-| Enable `rknpu` in kernel config | NPU kernel driver |
-| Configure gralloc HAL for libmali | GPU/display pipeline |
-| Add MPP kernel config | Video acceleration |
+| `bin/hw/android.hardware.keymaster@4.0-service.optee` | Keymaster service (OP-TEE) |
+| `bin/hw/android.hardware.gatekeeper@1.0-service.optee` | Gatekeeper service (OP-TEE) |
+| `lib64/hw/android.hardware.weaver@1.0-impl.so` | Weaver HAL (credential storage) |
+| `lib64/libRkkeymaster4.so` | Rockchip Keymaster 4 library |
+| `lib64/libkeymaster4support.so` | Keymaster support library |
 
-### Known limitations (cannot be fixed):
-- No AV1 hardware decode
-- No HDR display output
-- No Dolby/DTS audio passthrough (PCM only)
-- ⚠️  WiFi: bcmdhd out-of-tree driver (not mainline brcmfmac)
+---
+
+### Widevine DRM
+
+**Status: ⚠️ L3 software DRM only**
+
+Widevine L3 is present and functional — streaming apps (Netflix, Disney+, etc.)
+will work. However content is limited to SD quality for DRM-protected streams
+because L1 hardware DRM is not available on this device.
+
+**Why no L1:** Widevine L1 requires a secure video path — hardware that can
+decrypt and decode content entirely within the secure world without exposing
+unencrypted frames to the normal world. The RK3566 in this TV box configuration
+does not have this capability certified by Google.
+
+| Blob | Purpose |
+|---|---|
+| `lib/mediadrm/libwvdrmengine.so` | Widevine L3 DRM engine |
+| `lib/libwvhidl.so` | Widevine HIDL library |
+| `bin/hw/android.hardware.drm@1.3-service.widevine` | Widevine DRM service |
+| `bin/hw/android.hardware.drm@1.3-service.clearkey` | ClearKey DRM service |
+
+---
+
+### NPU: RKNPU (0.8 TOPS)
+
+**Status: 🔧 RKNN2 runtime required**
+
+The stock Android 11 RKNN v1 runtime is **incompatible** with Android 16 HALs.
+RKNN2 v1.6.0 is used instead, downloaded from `rockchip-linux/rknn-toolkit2`.
+
+Note: `CONFIG_RKNPU` was NOT enabled in the stock Android 11 kernel — the NPU
+was unused in the original firmware. We enable it in our BSP kernel config.
+
+| Blob | Purpose |
+|---|---|
+| `lib64/librknnrt.so` | RKNN2 inference runtime (~5.9MB) |
+| `bin/rknn_server` | NPU inference server daemon |
+| `lib64/hw/rockchip.hardware.neuralnetworks@1.0-impl.so` | NNAPI → RKNPU bridge |
+
+---
+
+### System HALs
+
+**Power management:**  
+`android.hardware.power-service.rockchip` — CPU frequency scaling (EAS/HMP),
+wake lock management, thermal throttling.
+
+**Lights:**  
+`android.hardware.lights-service.rockchip` — controls the power indicator LED
+on the front of the X88 Pro box.
+
+**Health:**  
+`android.hardware.health@2.0-impl-2.1.so` — reports power state to Android.
+Since the box is always plugged in, this reports AC charging permanently.
+
+**Memory tracking:**  
+`memtrack.rk356x.so` — allows `adb shell dumpsys meminfo` and memory pressure
+reporting to work correctly.
+
+---
+
+## What Requires the BSP Kernel
+
+The following **require** the Rockchip BSP kernel (5.10) and will **not work**
+with the AOSP GKI (Generic Kernel Image):
+
+- HDMI output (VOP2 display controller driver)
+- Hardware video decode/encode (rkvdec2 — no mainline driver)
+- Mali-G52 GPU kernel driver (pairs with libmali blob)
+- bcmdhd WiFi kernel module (out-of-tree, must build against BSP)
+- RKNPU kernel driver (not in stock kernel, must enable in BSP config)
+
+BSP kernel: `github.com/rockchip-linux/kernel` branch `develop-5.10`  
+Base defconfig: `rockchip_defconfig` (1050 entries, Android-oriented)
+
+---
+
+## Known Hardware Limitations
+
+These are physical hardware constraints that cannot be fixed in software:
+
+- ❌ **AV1 decode** — VPU does not support AV1
+- ❌ **HDR display** — Display controller lacks HDR metadata pipeline
+- ❌ **Audio bitstream passthrough** — No Dolby Digital / DTS hardware path
+- ❌ **Widevine L1** — No secure video path / Google certification
+- ❌ **4K@60fps WiFi** — AP6398S is WiFi 5 (802.11ac), not WiFi 6
+
+---
+
+## Phase 3 Blob Extraction Summary
+
+All blobs extracted from X88 Pro Android 11 vendor partition (`super.img`).
+
+**Extraction pipeline:**
+```
+super.img → simg2img → raw → lpunpack → vendor.img → debugfs → files
+```
+
+**Partition layout confirmed (from lpunpack --info):**
+```
+system:     ~1.08GB  (sectors 2048-2264304)
+system_ext: ~50MB    (sectors 2265088-2367840)
+vendor:     ~493MB   (sectors 2369536-3378664)
+product:    ~750MB   (sectors 3379200-4932080)
+odm:        ~600KB   (sectors 4933632-4934856)
+```
+
+**Complete blob inventory (52 files):**
+
+```
+proprietary/
+├── modules/
+│   └── bcmdhd.ko                    (2.1MB)  WiFi kernel module
+├── firmware/
+│   ├── fw_bcm4359c0_ag.bin          (640KB)  WiFi STA
+│   ├── fw_bcm4359c0_ag_apsta.bin    (640KB)  WiFi AP
+│   ├── fw_bcm4359c0_ag_p2p.bin      (627KB)  WiFi P2P
+│   ├── nvram_ap6398s.txt            (6KB)    WiFi calibration
+│   ├── nvram_ap6398sa.txt           (6KB)    WiFi calibration alt
+│   └── BCM4359C0.hcd                         BT 5.0 firmware
+├── lib64/
+│   ├── egl/
+│   │   └── libGLES_mali.so          (38MB)   Mali GPU driver
+│   ├── hw/
+│   │   ├── android.hardware.audio@6.0-impl.so
+│   │   ├── android.hardware.audio.effect@6.0-impl.so
+│   │   ├── android.hardware.bluetooth@1.0-impl.so
+│   │   ├── android.hardware.graphics.allocator@4.0-impl-bifrost.so
+│   │   ├── android.hardware.graphics.mapper@4.0-impl-bifrost.so
+│   │   ├── android.hardware.health@2.0-impl-2.1.so
+│   │   ├── android.hardware.memtrack@1.0-impl.so
+│   │   ├── android.hardware.tv.cec@1.0-impl.so
+│   │   ├── android.hardware.weaver@1.0-impl.so
+│   │   ├── audio.primary.rk30board.so
+│   │   ├── audio.r_submix.default.so
+│   │   ├── audio.usb.default.so
+│   │   ├── hdmi_cec.rk356x.so
+│   │   ├── hwcomposer.rk30board.so
+│   │   ├── hw_output.default.so
+│   │   ├── memtrack.rk356x.so
+│   │   ├── rockchip.hardware.neuralnetworks@1.0-impl.so
+│   │   ├── rockchip.hardware.outputmanager@1.0-impl.so
+│   │   └── vulkan.rk356x.so
+│   ├── libbaseparameter.so
+│   ├── libbt-vendor.so
+│   ├── libdrm.so
+│   ├── libkeymaster4support.so
+│   ├── libmpp.so                    (6.3MB)  Video MPP
+│   ├── librga.so                    (112KB)  2D accel
+│   ├── libomxvpu_dec.so             OMX video decode
+│   ├── libomxvpu_enc.so             OMX video encode
+│   ├── libRkkeymaster4.so
+│   └── librknnrt.so                 (5.9MB)  RKNN2 NPU runtime
+├── lib/
+│   ├── libwvhidl.so                 Widevine HIDL
+│   └── mediadrm/
+│       └── libwvdrmengine.so        Widevine L3 engine
+├── bin/
+│   ├── android.hardware.audio.service
+│   ├── android.hardware.bluetooth@1.0-service
+│   ├── android.hardware.drm@1.3-service.clearkey
+│   ├── android.hardware.drm@1.3-service.widevine
+│   ├── android.hardware.gatekeeper@1.0-service.optee
+│   ├── android.hardware.health@2.1-service
+│   ├── android.hardware.keymaster@4.0-service.optee
+│   ├── android.hardware.lights-service.rockchip
+│   ├── android.hardware.media.omx@1.0-service
+│   ├── android.hardware.power-service.rockchip
+│   ├── android.hardware.tv.cec@1.0-service
+│   ├── move_widevine_data.sh
+│   ├── rknn_server                  (883KB)  NPU daemon
+│   └── rockchip.hardware.neuralnetworks@1.0-service
+└── etc/
+    └── init.rknn_server.rc
+```
+
+**Run extraction:**
+```bash
+./scripts/phase3_device_prep.sh extract-blobs backup/super.img \
+    device/rockchip/x88pro/proprietary
+
+./scripts/phase3_device_prep.sh npu-blobs \
+    device/rockchip/x88pro/proprietary
+```
