@@ -175,3 +175,11 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.vulkan.level-0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.vulkan.level.xml \
     frameworks/native/data/etc/android.hardware.vulkan.version-1_1.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.vulkan.version.xml \
     frameworks/native/data/etc/android.software.vulkan.deqp.level-2020-03-01.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.vulkan.deqp.level.xml
+
+# fstab - partition mount configuration
+# SD card: /devices/platform/fe2b0000.dwmmc/mmc_host* -> sdcard1:auto
+# userdata: F2FS with AES-256 inline encryption
+# Also handles USB storage, zram swap
+PRODUCT_COPY_FILES += \
+    device/rockchip/x88pro/fstab.rk30board:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.rk30board \
+    device/rockchip/x88pro/fstab.rk30board:$(TARGET_COPY_OUT_RAMDISK)/fstab.rk30board
