@@ -236,17 +236,16 @@ extract_blobs() {
     #   Encode: H.264 (1080p@60fps), H.265 (1080p@60fps)
     #   NOT supported: AV1 (hardware limitation), HDR (hardware limitation)
     #
-    # Note: Library is named libmpp.so in this BSP (not librockchip_mpp.so
+    # Note: Library is named libmpp.so in this BSP
     # as found in some other Rockchip BSP versions)
     #
     # Expected: libmpp.so ~6.3MB
     cp /tmp/x88pro-vendor/lib64/libmpp.so \
         "$OUTPUT_DIR/lib64/" 2>/dev/null && \
         success "Video: libmpp.so ($(du -sh $OUTPUT_DIR/lib64/libmpp.so | cut -f1))" || \
-        warning "Video: libmpp.so not found - trying librockchip_mpp..."
+        warning "Video: libmpp.so not found"
     # Fallback: some BSP versions use a different name
-    find /tmp/x88pro-vendor/lib64 -name "librockchip_mpp*.so" \
-        -exec cp {} "$OUTPUT_DIR/lib64/" \; 2>/dev/null || true
+    # (no fallback needed - hybrid approach copies all lib64/*.so)
  
     # Also get 32-bit MPP for 32-bit app compatibility
     cp /tmp/x88pro-vendor/lib/libmpp.so \
@@ -278,7 +277,7 @@ extract_blobs() {
         "$OUTPUT_DIR/lib/" 2>/dev/null || true
  
     # -------------------------------------------------------------------------
-    # WiFi: AP6398S (Broadcom BCM4359c0 / chip marketed as BCM43598)
+    # WiFi: AP6398S (Broadcom BCM4359c0)
     # -------------------------------------------------------------------------
     # The AP6398S WiFi module uses the bcmdhd out-of-tree kernel driver.
     # Note: Despite earlier assumption, this device uses bcmdhd (Broadcom's
@@ -303,7 +302,7 @@ extract_blobs() {
         warning "WiFi: bcmdhd.ko not found"
  
     # WiFi firmware - AP6398S uses BCM4359c0 firmware
-    # (chip silicon: BCM4359 revision c0, marketed as BCM43598, module: AP6398S)
+    # (chip silicon: BCM4359 revision c0, module name: AP6398S)
     find /tmp/x88pro-vendor/etc/firmware -name "fw_bcm4359c0*" \
         -exec cp {} "$OUTPUT_DIR/firmware/" \; 2>/dev/null
     WIFI_COUNT=$(ls "$OUTPUT_DIR/firmware"/fw_bcm4359c0* 2>/dev/null | wc -l)

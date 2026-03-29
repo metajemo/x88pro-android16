@@ -147,7 +147,7 @@ hardware limitation of this board's audio path — cannot be fixed in software.
 
 **Chip identification:**
 - Module: AMPAK AP6398S
-- Silicon: BCM43598 (marketing) = BCM4359 revision c0
+- Silicon: BCM4359 revision c0 (marketed as BCM43598, module name AP6398S)
 - WiFi 5 (802.11ac), dual-band 2.4GHz + 5GHz
 
 **Kernel config (extracted from stock boot.img):**
@@ -446,7 +446,7 @@ product:    ~750MB   (sectors 3379200-4932080)
 odm:        ~600KB   (sectors 4933632-4934856)
 ```
 
-**Complete blob inventory (52 files):**
+**Complete blob inventory (~1169 files, extracted by hybrid script):**
 
 ```
 proprietary/
