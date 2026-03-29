@@ -202,7 +202,8 @@ phase3-extract-dt:
 phase3-extract-blobs:
 	@echo -e "$(BLUE)==> Phase 3b: Extracting vendor blobs from super.img...$(NC)"
 	@[ -f "$(BACKUP_DIR)/super.img" ] || (echo -e "$(RED)ERROR: $(BACKUP_DIR)/super.img not found. Run phase1 first.$(NC)" && exit 1)
-	@echo -e "$(YELLOW)    Extracts: libGLES_mali.so (GPU), libmpp.so (video), bcmdhd.ko + WiFi/BT firmware$(NC)"
+	@echo -e "$(YELLOW)    Extracts: ALL vendor blobs (~1169 files) with auto-detection of WiFi/BT chip$(NC)"
+	@echo -e "$(YELLOW)    Compatible with X88 Pro, H96 Max, and other RK3566 TV boxes$(NC)"
 	@echo -e "$(YELLOW)    Note: NPU blobs intentionally skipped (Android 11 RKNN v1 incompatible with Android 16)$(NC)"
 	@scripts/phase3_device_prep.sh extract-blobs $(BACKUP_DIR)/super.img device/$(VENDOR)/$(DEVICE)/proprietary
 

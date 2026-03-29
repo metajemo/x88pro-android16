@@ -159,41 +159,31 @@ Key facts about the build environment:
     device/rockchip/x88pro/proprietary
 ```
 
-This extracts and sets up:
+The script uses a **hybrid extraction approach** designed to work on X88 Pro
+and other RK3566 TV boxes (H96 Max, X88 Pro 20, etc.) with different hardware:
 
-**GPU (Mali-G52 Bifrost):**
-- `libGLES_mali.so` — OpenGL ES 3.2 + OpenCL 2.0 driver (~38MB)
-- `vulkan.rk356x.so` — Vulkan 1.1 driver
-- `hwcomposer.rk30board.so` — Hardware Composer HAL
-- gralloc bifrost allocator + mapper HALs
+**Phase A — Complete copy (~1169 files total):**
+- `lib64/` — all 68 shared libraries (GPU, MPP, RGA, OMX, Keymaster, Widevine, WiFi, Camera, OpenCL, etc.)
+- `lib/` — all 15 32-bit libraries (for 32-bit app compatibility)
+- `bin/` — all 26 HAL service binaries
+- `etc/` — all 1028 HAL config files (audio policy, media codecs, VINTF manifests, init scripts, etc.)
 
-**Video (Rockchip MPP):**
-- `libmpp.so` — Hardware H.264/H.265/VP9 decode/encode (~6.3MB)
-- `librga.so` — 2D acceleration (scaling, rotation, color conversion)
+**Phase B — Hardware auto-detection:**
+- WiFi chip detected from firmware filenames → copies only matching firmware
+  - BCM4359c0 (AP6398S) — X88 Pro ✅ tested
+  - BCM43456 (AP6256), BCM43455 (AP6255) — other RK3566 boxes
+- BT firmware auto-detected from `BCM*.hcd` chip naming
+- WiFi driver detected (bcmdhd out-of-tree vs brcmfmac mainline)
+- Mali GPU version warning for BSP kernel compatibility check
 
-**WiFi (AP6398S / BCM4359c0):**
-- `bcmdhd.ko` — WiFi kernel module (out-of-tree, must build against BSP kernel)
-- `fw_bcm4359c0_ag*.bin` — WiFi firmware (STA / AP / P2P modes)
-- `nvram_ap6398s.txt` — RF calibration data
+> **Note on WiFi:** The X88 Pro uses Broadcom's proprietary `bcmdhd` out-of-tree
+> driver. `bcmdhd.ko` must be rebuilt against the BSP kernel 5.10.
 
-**Bluetooth (AP6398S / BCM4359c0):**
-- `BCM4359C0.hcd` — BT 5.0 init firmware
+> **Note on video decode:** The RK3566 `rkvdec2` has no mainline kernel driver.
+> BSP kernel 5.10 + `libmpp.so` is required. AV1 is not supported by the hardware.
 
-**NPU (RKNPU / RKNN2):**
-- `librknnrt.so` — RKNN2 v1.6.0 inference runtime (~5.9MB)
-- `rknn_server` — NPU inference server daemon
-
-> **Note on WiFi driver:** The X88 Pro uses Broadcom's proprietary `bcmdhd`
-> out-of-tree driver, NOT `brcmfmac`. Confirmed during
-> Phase 3 blob extraction. `bcmdhd.ko` must be compiled against the BSP kernel.
-
-> **Note on video decode:** The RK3566 uses `rkvdec2` which has no mainline
-> kernel driver. We use the Rockchip BSP kernel 5.10 with `libmpp.so` for
-> hardware accelerated H.264/H.265/VP9. AV1 is not supported by the hardware.
-
-> **Note on firmware paths:** `bcmdhd` uses generic paths at the kernel config
-> level (`fw_bcmdhd.bin`, `nvram.txt`). Our build creates symlinks to the actual
-> AP6398S firmware files at those paths.
+> **Note on Widevine:** L3 (software) DRM is included — streaming apps work but
+> DRM-protected content is limited to SD quality. L1 hardware DRM is not available.
 
 ---
 
