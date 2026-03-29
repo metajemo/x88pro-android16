@@ -18,7 +18,7 @@ and upstream kernel research (March 2026).
 | HDMI audio | dw-hdmi-audio | 🔧 PCM only, no passthrough | LibreELEC community |
 | HDMI CEC | dw-hdmi-cec | 🔧 Should work, untested | LibreELEC community |
 | GPU | Mali-G52 / libmali | 🔧 Blob works, Panfrost alternative | Rockchip libmali |
-| WiFi | AP6398S / brcmfmac | 🔧 Mainline driver + firmware blobs | Mainline kernel |
+| WiFi | AP6398S / bcmdhd | 🔧 (out-of-tree) + firmware blobs |  Not mainline brcmfmac |
 | Bluetooth | AP6398S / btbcm | 🔧 Mainline driver + firmware blobs | Mainline kernel |
 | Video decode | RKVDEC2 / MPP | 🔧 Via Rockchip MPP (BSP kernel) | Rockchip MPP |
 | Video encode | RKVENC / MPP | 🔧 1080p60, via Rockchip MPP | Rockchip MPP |
@@ -153,6 +153,17 @@ These are extracted from our Android 11 vendor partition in Phase 3.
 **Android 16 impact:** WiFi should work after placing firmware files in
 the correct vendor firmware path.
 
+```
+**IMPORTANT correction discovered during Phase 3 blob extraction:**
+Despite the AP6398S having brcmfmac mainline support, this specific
+X88 Pro BSP uses Broadcom's proprietary bcmdhd out-of-tree driver.
+The bcmdhd.ko kernel module must be compiled against the BSP kernel
+and included as a vendor module. This means WiFi requires:
+  - bcmdhd.ko built from BSP kernel source
+  - fw_bcm4359c0_ag*.bin firmware files (in /vendor/etc/firmware/)
+  - nvram_ap6398s.txt calibration data
+```
+
 ---
 
 ### 🔧 Bluetooth — AMPAK AP6398S / btbcm (Mainline driver, needs firmware)
@@ -272,3 +283,4 @@ HDR content will be tone-mapped to SDR automatically.
 - No AV1 hardware decode
 - No HDR display output
 - No Dolby/DTS audio passthrough (PCM only)
+- ⚠️  WiFi: bcmdhd out-of-tree driver (not mainline brcmfmac)
