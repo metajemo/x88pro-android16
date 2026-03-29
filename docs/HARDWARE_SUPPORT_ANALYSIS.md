@@ -399,20 +399,26 @@ ro.build.fingerprint = spoofed as Pixel 5 (redfin) for Play Store compat
 `dumpsys sensorservice` confirms: **no sensors on device** — expected for a TV box.
 
 ### USB Port Details
-8 USB buses total (4 physical, 4 internal):
+4 physical USB ports from 4 independent controllers:
 
-| Bus | Speed | Type | Purpose |
+| Controller | Mode | Speed | Physical Port |
 |---|---|---|---|
-| usb1 | 480 Mbps | USB 2.0 | Internal (WiFi SDIO bridge) |
-| usb2 | 480 Mbps | USB 2.0 | Internal |
-| usb3 | 12 Mbps | USB 1.1 | Internal (BT UART bridge) |
-| usb4 | 12 Mbps | USB 1.1 | Internal |
-| usb5 | 480 Mbps | USB 2.0 | Physical port |
-| usb6 | 5000 Mbps | **USB 3.0** | Physical port |
-| usb7 | 480 Mbps | USB 2.0 | Physical port |
-| usb8 | 5000 Mbps | **USB 3.0** | Physical port |
+| `fcc00000.dwc3` | OTG (host/device) | USB 3.0 | USB-C (power + data) |
+| `fd000000.dwc3` | Host only | USB 3.0 | USB-A 3.0 (Blue) |
+| `fd800000` EHCI | Host only | USB 2.0 | USB-A 2.0 |
+| `fd840000` EHCI | Host only | USB 2.0 | USB-A 2.0 (may be on back) |
 
-Physical configuration: **2x USB 3.0 + 2x USB 2.0** (not 3x USB-A + 1x USB-C as previously assumed)
+**USB bus mapping (8 buses = 4 controllers × 2 speeds each):**
+- `usb1+2` (EHCI) — 2x USB 2.0 physical ports
+- `usb3+4` (OHCI) — companion controllers for same ports (USB 1.1 fallback, not extra ports)
+- `usb5+6` (xHCI) — one USB 3.0 port (USB 2.0 + USB 3.0 on same connector)
+- `usb7+8` (xHCI) — USB-C OTG port (USB 2.0 + USB 3.0 on same connector)
+
+**USB-C OTG port notes:**
+- Currently powered by DC adapter via USB-C → acting as charging port (DCP=1)
+- When not charging: supports OTG host mode (USB-HOST=1 confirmed via extcon)
+- VBUS supply controlled by GPIO (vbus-supply in DTS)
+- extcon state: USB=0, USB-HOST=1, USB_VBUS_EN=1, DCP=1
 
 ### eMMC Details
 - Model: `128G32` — 128GB
