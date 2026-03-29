@@ -464,13 +464,32 @@ The RK3566 SoC has interfaces that are present in silicon but not physically
 populated on the X88 Pro PCB. These could theoretically be enabled with hardware
 modifications (soldering connectors) and DTS changes.
 
-| Interface | SoC Support | Driver | Board Status | Note |
-|---|---|---|---|---|
-| SATA ×2 | ✅ | `snps,dwc-ahci` mainline | ❌ No connector | Shares SerDes lanes with USB 3.0 |
-| PCIe 2.0 | ✅ | `snps,dw-pcie` mainline | ❌ No connector | Shares SerDes lanes with SATA |
-| DSI display ×2 | ✅ | mainline | ❌ Not connected | TV box has no DSI screen |
-| eDP display | ✅ | mainline | ❌ Not connected | TV box has no eDP screen |
-| Camera ISP | ✅ | mainline | ❌ No camera | ISP hardware present, no lens |
+| Interface | SoC Support | Kernel Driver | Kernel Status | Board Status | HW Mod Needed |
+|---|---|---|---|---|---|
+| SATA ×2 | ✅ | `snps,dwc-ahci` | ✅ Compiled in | ❌ No connector | Solder SATA connector + reassign combo PHY |
+| PCIe 2.0 | ✅ | `snps,dw-pcie` | ✅ Compiled in | ❌ No connector | Solder PCIe slot + reassign combo PHY |
+| DSI display ×2 | ✅ | `CONFIG_DRM_MIPI_DSI` | ✅ Compiled in | ❌ Not connected | Solder DSI connector + panel driver |
+| eDP display | ✅ | `CONFIG_PHY_ROCKCHIP_NANENG_EDP` | ✅ Compiled in | ❌ Not connected | Solder eDP connector |
+| Camera (ISP) | ✅ | `CONFIG_VIDEO_ROCKCHIP_ISP` | ✅ Compiled in | ❌ No camera | Solder MIPI-CSI connector + camera module |
+| Camera (CIF) | ✅ | `CONFIG_VIDEO_ROCKCHIP_CIF` | ✅ Compiled in | ❌ No camera | Solder parallel camera connector |
+
+**All software drivers are already compiled into the stock kernel and BSP defconfig.**
+Enabling any of these interfaces requires ONLY:
+1. Solder the physical connector to the PCB
+2. Modify the DTS (a few lines — enable node + reassign PHY if needed)
+3. Rebuild kernel
+
+**Example: enabling SATA (DTS changes only, no kernel recompile needed):**
+```dts
+&combphy1 {                          /* reassign from USB3 to SATA */
+    rockchip,phone-select = <PHY_TYPE_SATA>;
+    status = "okay";
+};
+&sata1 { status = "okay"; }         /* enable SATA controller */
+&usbdrd { status = "disabled"; }    /* disable USB3 OTG (lane conflict) */
+```
+Note: Enabling SATA costs one USB 3.0 port (lane sharing). PCIe has the same constraint.
+DSI, eDP, and camera have dedicated PHYs — no lane conflicts.
 
 **SATA/PCIe/USB3 lane sharing:**
 The RK3566 has 2 combo PHYs (`naneng-combphy`), each configurable as
