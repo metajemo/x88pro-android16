@@ -175,8 +175,8 @@ phase2-sync:
 #   RAM:          8GB LPDDR4
 #   Storage:      128GB eMMC
 #   Ethernet:     Synopsys GMAC (stmmac driver - mainline) ✅
-#   WiFi/BT:      AMPAK AP6398S (BCM43598) - brcmfmac/btbcm (mainline) 🔧
-#   GPU:          Mali-G52 - libmali blob (NOT Panfrost for Android) 🔧
+#   WiFi/BT:      AMPAK AP6398S (BCM4359c0) - bcmdhd (out-of-tree) + btbcm 🔧
+#   GPU:          Mali-G52 Bifrost - libGLES_mali.so blob (NOT Panfrost) 🔧
 #   Video decode: RKVDEC2 - Rockchip MPP (BSP kernel, no mainline driver) 🔧
 #   Video encode: RKVENC  - Rockchip MPP 🔧
 #   NPU:          RKNPU   - open source kernel driver + RKNN2 SDK 🔧
@@ -186,7 +186,7 @@ phase2-sync:
 # Steps:
 #   3a. extract-dt    - Convert binary DTB -> human-readable DTS source
 #   3b. extract-blobs - Unpack vendor partition from super.img
-#                       (libmali, librockchip_mpp, WiFi/BT firmware)
+#                       (libGLES_mali.so, libmpp.so, WiFi/BT firmware)
 #   3c. npu-blobs     - Download RKNN2 runtime (replaces Android 11 NPU blobs)
 #   3d. device-tree   - Generate Android 16 device tree skeleton
 # =============================================================================
@@ -202,7 +202,7 @@ phase3-extract-dt:
 phase3-extract-blobs:
 	@echo -e "$(BLUE)==> Phase 3b: Extracting vendor blobs from super.img...$(NC)"
 	@[ -f "$(BACKUP_DIR)/super.img" ] || (echo -e "$(RED)ERROR: $(BACKUP_DIR)/super.img not found. Run phase1 first.$(NC)" && exit 1)
-	@echo -e "$(YELLOW)    Extracts: libmali (GPU), librockchip_mpp (video), WiFi/BT firmware$(NC)"
+	@echo -e "$(YELLOW)    Extracts: libGLES_mali.so (GPU), libmpp.so (video), bcmdhd.ko + WiFi/BT firmware$(NC)"
 	@echo -e "$(YELLOW)    Note: NPU blobs intentionally skipped (Android 11 RKNN v1 incompatible with Android 16)$(NC)"
 	@scripts/phase3_device_prep.sh extract-blobs $(BACKUP_DIR)/super.img device/$(VENDOR)/$(DEVICE)/proprietary
 

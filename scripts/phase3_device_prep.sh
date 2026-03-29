@@ -165,9 +165,9 @@ extract_blobs() {
     mkdir -p "$OUTPUT_DIR/modules"
  
     # -------------------------------------------------------------------------
-    # GPU: Mali-G52 (libmali blob + gralloc HAL)
+    # GPU: Mali-G52 Bifrost (libGLES_mali.so blob + gralloc HAL)
     # -------------------------------------------------------------------------
-    # The Mali-G52 GPU requires Rockchip/ARM's proprietary libmali blob.
+    # The Mali-G52 GPU requires ARM's proprietary libGLES_mali.so blob.
     # Android's graphics stack (gralloc, HWC) requires this specific driver.
     # Open source Panfrost is NOT compatible with Android's gralloc HAL.
     #
@@ -178,7 +178,7 @@ extract_blobs() {
     #   vulkan.rk356x.so      - Vulkan ICD (installable client driver)
     #   hwcomposer.rk30board.so - Hardware Composer HAL (display composition)
     #
-    # IMPORTANT: libmali version must match the BSP kernel's Mali driver version.
+    # IMPORTANT: libGLES_mali.so version must match the BSP kernel's Mali driver version.
     # Version mismatch causes black screen or rendering glitches at boot.
     #
     # Expected sizes (from X88 Pro Android 11 vendor):
@@ -192,7 +192,7 @@ extract_blobs() {
         success "GPU: libGLES_mali.so ($(du -sh $OUTPUT_DIR/lib64/egl/libGLES_mali.so | cut -f1))" || \
         warning "GPU: libGLES_mali.so not found"
  
-    # Check libmali version for compatibility warning
+    # Check libGLES_mali version for compatibility warning
     MALI_VER=$(strings "$OUTPUT_DIR/lib64/egl/libGLES_mali.so" 2>/dev/null | \
         grep -m1 "arm_release_ver\|Mali-G52" | head -1 || echo "unknown")
     [ "$MALI_VER" != "unknown" ] && \
@@ -278,7 +278,7 @@ extract_blobs() {
         "$OUTPUT_DIR/lib/" 2>/dev/null || true
  
     # -------------------------------------------------------------------------
-    # WiFi: AP6398S (Broadcom BCM43598 / BCM4359c0)
+    # WiFi: AP6398S (Broadcom BCM4359c0 / chip marketed as BCM43598)
     # -------------------------------------------------------------------------
     # The AP6398S WiFi module uses the bcmdhd out-of-tree kernel driver.
     # Note: Despite earlier assumption, this device uses bcmdhd (Broadcom's
@@ -303,7 +303,7 @@ extract_blobs() {
         warning "WiFi: bcmdhd.ko not found"
  
     # WiFi firmware - AP6398S uses BCM4359c0 firmware
-    # (chip marketing name AP6398S = BCM43598 = BCM4359 silicon revision c0)
+    # (chip silicon: BCM4359 revision c0, marketed as BCM43598, module: AP6398S)
     find /tmp/x88pro-vendor/etc/firmware -name "fw_bcm4359c0*" \
         -exec cp {} "$OUTPUT_DIR/firmware/" \; 2>/dev/null
     WIFI_COUNT=$(ls "$OUTPUT_DIR/firmware"/fw_bcm4359c0* 2>/dev/null | wc -l)

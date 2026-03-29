@@ -50,7 +50,7 @@ Community project to build and run Android 16 on the **X88 Pro** Android TV box 
 | AV1 decode | ❌ Not possible | RK3566 VPU hardware limitation |
 | HDR display | ❌ Not possible | RK3566 hardware limitation |
 
-> ⚠️ **WiFi driver note:** Despite the AP6398S having mainline `brcmfmac` support,
+> ⚠️ **WiFi driver note:** Despite the AP6398S chipset having mainline `brcmfmac` support in theory,
 > the X88 Pro BSP uses Broadcom's proprietary `bcmdhd` out-of-tree driver.
 > `bcmdhd.ko` must be compiled against the BSP kernel. See
 > [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for details.
@@ -183,7 +183,7 @@ This extracts and sets up:
 - `rknn_server` — NPU inference server daemon
 
 > **Note on WiFi driver:** The X88 Pro uses Broadcom's proprietary `bcmdhd`
-> out-of-tree driver, NOT the mainline `brcmfmac`. This was discovered during
+> out-of-tree driver, NOT `brcmfmac`. Confirmed during
 > Phase 3 blob extraction. `bcmdhd.ko` must be compiled against the BSP kernel.
 
 > **Note on video decode:** The RK3566 uses `rkvdec2` which has no mainline
