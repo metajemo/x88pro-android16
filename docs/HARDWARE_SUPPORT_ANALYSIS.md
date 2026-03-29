@@ -420,6 +420,13 @@ ro.build.fingerprint = spoofed as Pixel 5 (redfin) for Play Store compat
 - VBUS supply controlled by GPIO (vbus-supply in DTS)
 - extcon state: USB=0, USB-HOST=1, USB_VBUS_EN=1, DCP=1
 
+**Note on disabled OHCI (fd8c0000):**
+The DTS has one OHCI companion controller disabled (`fd8c0000`). This is NOT
+a missing physical port — it is the USB 1.1 companion controller for the second
+EHCI port. Disabling it is a deliberate power-saving measure. The physical USB
+port works normally for USB 2.0 and USB 1.1 devices via the EHCI controller.
+Re-enabling it in the DTS would have no visible effect.
+
 ### eMMC Details
 - Model: `128G32` — 128GB
 - Manufacturer: Toshiba/Kioxia (manfid `0x000011`)
