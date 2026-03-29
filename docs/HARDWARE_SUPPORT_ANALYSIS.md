@@ -458,6 +458,32 @@ Base defconfig: `rockchip_defconfig` (1050 entries, Android-oriented)
 
 ---
 
+## SoC Interfaces Not Exposed on This Board
+
+The RK3566 SoC has interfaces that are present in silicon but not physically
+populated on the X88 Pro PCB. These could theoretically be enabled with hardware
+modifications (soldering connectors) and DTS changes.
+
+| Interface | SoC Support | Driver | Board Status | Note |
+|---|---|---|---|---|
+| SATA ×2 | ✅ | `snps,dwc-ahci` mainline | ❌ No connector | Shares SerDes lanes with USB 3.0 |
+| PCIe 2.0 | ✅ | `snps,dw-pcie` mainline | ❌ No connector | Shares SerDes lanes with SATA |
+| DSI display ×2 | ✅ | mainline | ❌ Not connected | TV box has no DSI screen |
+| eDP display | ✅ | mainline | ❌ Not connected | TV box has no eDP screen |
+| Camera ISP | ✅ | mainline | ❌ No camera | ISP hardware present, no lens |
+
+**SATA/PCIe/USB3 lane sharing:**
+The RK3566 has 2 combo PHYs (`naneng-combphy`), each configurable as
+SATA, PCIe, or USB 3.0. On the X88 Pro, both are assigned to USB 3.0:
+- `phy@fe830000` → USB 3.0 host (fd000000.dwc3)
+- `phy@fe840000` → USB 3.0 OTG (fcc00000.dwc3)
+
+To enable SATA, you would need to reassign a combo PHY from USB3→SATA,
+losing one USB 3.0 port. The SATA connector is not physically present on
+the PCB, making this a hardware modification project.
+
+---
+
 ## Known Hardware Limitations
 
 These are physical hardware constraints that cannot be fixed in software:
