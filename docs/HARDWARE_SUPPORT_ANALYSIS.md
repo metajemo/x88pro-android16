@@ -20,6 +20,10 @@ Stock OS: Android 11 (SDK 30, kernel 4.19.172)
 | SD card slot | `dw_mmc` (mainline) | ✅ Full | `fe2b0000.dwmmc`, vold managed, auto-format |
 | IR receiver | `pwm-remotectl` (mainline) | ✅ Full | `fe700030.pwm`, full media remote keyset |
 | IR blaster | `ir-led` (mainline) | ✅ Full | Can transmit IR commands to other devices |
+| USB keyboard | `usbhid` (mainline) | ✅ Full | Standard HID, wired + 2.4GHz dongle |
+| USB mouse | `usbhid` (mainline) | ✅ Full | Standard HID, wired + 2.4GHz dongle |
+| BT keyboard/mouse | `btusb` + BT HID (mainline) | ✅ Full | Via Bluetooth HID profile |
+| IR blaster | `ir-led` (mainline) | ✅ Full | Can transmit IR commands to other devices |
 | Front panel display | HT1628 LED driver (mainline) | ✅ Full | 7-segment clock display on box front |
 | Front panel LED | `work-led` (mainline) | ✅ Full | Power/status indicator LED |
 | RTC | HYM8563 (mainline) | ✅ Full | I2C battery-backed RTC at `3-0051` |
