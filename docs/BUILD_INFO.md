@@ -8,7 +8,7 @@
 | Build ID | `BP2A.250605.031.A2` | |
 | Security patch level | `2025-07-01` | |
 | Java | OpenJDK 17.0.18 | Must be 17, not 21 |
-| Clang | 20.0.0 (r547379) | Android prebuilt, +PGO +Bolt +LTO +MLGO |
+| Clang | 20.0.0 (r547379) | Latest Android prebuilt (Feb 2025), +PGO +Bolt +LTO +MLGO. Newer than upstream LLVM numbering suggests — do not upgrade. |
 | BSP Kernel | 5.10.x | `rockchip-linux/kernel develop-5.10` |
 | Kernel defconfig | `rockchip_defconfig` | + `kernel-config-x88pro.config` overlay |
 | Build machine | Ubuntu 24.04.4 | 12 cores, 32GB RAM, NVMe |
