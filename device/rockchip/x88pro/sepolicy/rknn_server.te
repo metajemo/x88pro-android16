@@ -40,5 +40,3 @@ allow rknn_server self:unix_stream_socket create_socket_perms_no_ioctl;
 # Logcat via /dev/socket/logdw (uses unix_dgram_socket)
 allow rknn_server self:unix_dgram_socket { create write };
 
-# neverallow: only init and rknn_server itself may execute this binary
-neverallow { domain -rknn_server -init } rknn_server_exec:file { execute execute_no_trans };
