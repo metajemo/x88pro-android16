@@ -120,7 +120,18 @@ deps() {
         libelf-dev \
         gcc-aarch64-linux-gnu \
         g++-aarch64-linux-gnu \
-	binwalk
+	binwalk \
+        libncurses5 \
+        libncurses5-dev \
+        libncursesw5 \
+        libtinfo5 \
+        libtinfo-dev \
+        gperf \
+        lib32ncurses-dev \
+        lib32stdc++6 \
+        lib32z1 \
+        libreadline-dev \
+        libghc-zlib-dev
 
     echo ""
     success "Dependencies installed successfully."
