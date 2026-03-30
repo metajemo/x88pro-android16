@@ -26,16 +26,24 @@ References:
 
 Vendor blobs extracted from our X88 Pro were scanned for known BADBOX indicators:
 ```
-✅ /data/system/Corejava         — not found in vendor blobs
-✅ open_preference.xml           — not found in vendor blobs
+⚠️  /data/system/Corejava         — CONFIRMED PRESENT
+    Files: e.l (40 bytes, Stage 1 payload), node/ (empty dir)
+    Date:  2022-07-13 (pre-installed at factory, same as build date)
+✅ open_preference.xml           — not found
 ✅ dotinapp.com / ycxrl.com      — no C2 domains in vendor blobs
-✅ DGBLauncher / Corejava APK    — not found in vendor blobs
+✅ DGBLauncher / Corejava APK    — not found in vendor partition
 ```
 
-BADBOX typically resides in the **system partition** (not vendor), so a clean
-vendor blob scan does not guarantee the stock system is uninfected. However,
-since our Android 16 build completely replaces the system partition, any
-stock firmware malware is fully eliminated.
+**BADBOX infection CONFIRMED on this unit.**
+
+- Stage 1 payload (`e.l`, 40 bytes) present since factory
+- Stage 2 payload (`node/`) directory empty — C2 servers were taken down
+  in 2023 so malware never received instructions on this device
+- Network scan shows no active C2 connections (ports 5228=Google, 37712=LAN)
+- Infection is **dormant** but present in system partition
+
+Our Android 16 build completely replaces the system partition, fully
+eliminating the infection.
 
 ### Why This Project Helps
 
