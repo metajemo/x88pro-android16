@@ -209,12 +209,15 @@ java_setup() {
 setup_ccache() {
     info "Setting up ccache (compiler cache)..."
 
+    mkdir -p "$HOME/.ccache"
+    export CCACHE_DIR="$HOME/.ccache"
     ccache -M "$CCACHE_SIZE"
 
     # Add to bashrc only if not already there
     if ! grep -q "USE_CCACHE" ~/.bashrc; then
         echo 'export USE_CCACHE=1' >> ~/.bashrc
         echo 'export CCACHE_EXEC=$(which ccache)' >> ~/.bashrc
+        echo 'export CCACHE_DIR=$HOME/.ccache' >> ~/.bashrc
         success "ccache environment variables added to ~/.bashrc"
     else
         success "ccache environment variables already in ~/.bashrc"
