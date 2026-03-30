@@ -51,10 +51,13 @@
 
 ## Rebuild scope after Phase 4
 
-No full rebuild needed for the remaining tasks:
+No full rebuild needed for any of the remaining tasks:
 
 | Task | What to rebuild | Command | Time |
 |---|---|---|---|
 | FORTIFY_SOURCE patch | Kernel + boot.img | `make -j12` in kernel dir, then `m bootimage` | ~9 min + few min |
 | SELinux enforcing | boot.img only (cmdline) + vendor per denial | `m bootimage`, then `m vendorimage` per fix | Minutes per iteration |
 | CVE audit | Nothing — docs only | — | — |
+| Vendor blob inventory | Nothing — docs only | — | — |
+
+A full rebuild would only be needed if the audit revealed a blob that shouldn't be in the build at all — an unlikely edge case.
