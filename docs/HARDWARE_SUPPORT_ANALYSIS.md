@@ -50,7 +50,7 @@ Stock OS: Android 11 (SDK 30, kernel 4.19.172)
 | USB audio | `audio.usb.default.so` | 🔧 Blob required | USB DAC/headset support |
 | Keymaster / Security | OP-TEE (TrustZone) | 🔧 Blob required | Keymaster 4.0 via `trust.img` BL32 |
 | Gatekeeper | OP-TEE (TrustZone) | 🔧 Blob required | Screen lock backed by TrustZone |
-| Widevine DRM | L3 software DRM | ⚠️ L3 only | Streaming works — SD quality for DRM content |
+| Widevine DRM | L3 software DRM | ⚠️ L3 only | Streaming works — SD quality max. L1 impossible (no secure video path). No newer blob publicly available. |
 | NPU (RKNPU 0.8 TOPS) | RKNN2 v1.6.0 | 🔧 RKNN2 only | Android 11 RKNN v1 blobs incompatible |
 | Power management | `power-service.rockchip` | 🔧 Blob required | CPU scaling, thermal management |
 | Lights / LED | `lights-service.rockchip` | 🔧 Blob required | Power indicator LED |

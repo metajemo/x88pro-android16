@@ -95,7 +95,9 @@ Compared to stock Android 11:
 ### Known Remaining Concerns
 
 - **Widevine L3** blobs came from stock vendor — verified clean but not
-  independently audited. L3 is software-only so impact is limited.
+  independently audited. L3 is software-only (no TEE access) so impact
+  is limited. No newer version publicly available from Google — stock
+  blob is the correct choice for community builds.
 - **OP-TEE (trust.img)** is reused from stock — this is the TrustZone
   firmware. It's Rockchip's standard OP-TEE build, not ODM-modified.
 - **bcmdhd.ko** WiFi module came from stock vendor — standard Broadcom

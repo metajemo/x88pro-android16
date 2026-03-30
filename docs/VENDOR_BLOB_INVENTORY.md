@@ -12,7 +12,7 @@ No vendor blobs needed. AOSP version is always preferred.*
 
 | Component | AOSP Module | Notes |
 |---|---|---|
-| ClearKey DRM | `frameworks/av/drm/mediadrm/plugins/clearkey` | AIDL v1, newer than vendor HIDL |
+| ClearKey DRM | `frameworks/av/drm/mediadrm/plugins/clearkey` | AIDL v1, newer than vendor HIDL. Open source unlike Widevine. |
 | Audio HIDL HAL | `hardware/interfaces/audio` | `android.hardware.audio@6.0-impl` |
 | Audio Effect HAL | `hardware/interfaces/audio/effect` | `android.hardware.audio.effect@6.0-impl` |
 | Audio USB | `hardware/libhardware/modules/usbaudio` | `audio.usb.default` |
@@ -107,14 +107,31 @@ Tied to the specific `trust.img` on this device.
 | `bin/android.hardware.lights-service.rockchip` | LED/lights HAL |
 
 ### Widevine DRM L3
-Google-provisioned per device. L3 = software DRM (SD quality only).
-L1 hardware DRM not available on this hardware.
+Google proprietary DRM. Cannot be built from source — requires a license
+agreement with Google and is distributed as device-specific prebuilt binaries.
 
-| Blob | Purpose |
-|---|---|
-| `lib/libwvhidl.so` | Widevine HIDL library |
-| `lib/mediadrm/libwvdrmengine.so` | Widevine L3 DRM engine |
-| `bin/android.hardware.drm@1.3-service.widevine` | Widevine DRM service |
+**Why we use the stock blob:**
+- Our stock firmware has a valid Google-provisioned Widevine L3 binary
+- It is device-specific and works with our hardware
+- No newer version is publicly available from Google
+- Google does not offer public downloads of Widevine binaries
+- L3 = software DRM (SD quality only for protected content)
+- L1 hardware DRM not available (no secure video path on this hardware)
+
+**ClearKey vs Widevine:**
+- ClearKey: open source, built by AOSP from source (preferred) ✅
+- Widevine: Google proprietary, must use vendor blob ⚠️
+
+| Blob | Purpose | Notes |
+|---|---|---|
+| `lib/libwvhidl.so` | Widevine HIDL library | Google proprietary |
+| `lib/mediadrm/libwvdrmengine.so` | Widevine L3 DRM engine | Contains obfuscated CDM |
+| `bin/android.hardware.drm@1.3-service.widevine` | Widevine DRM service | HIDL 1.3, device-specific |
+
+**Note on streaming quality:**
+With Widevine L3, streaming apps (Netflix, Disney+, etc.) will work but
+DRM-protected content is limited to SD quality (480p). HD/4K requires
+Widevine L1 which needs a secure video path — not available on this hardware.
 
 ---
 
