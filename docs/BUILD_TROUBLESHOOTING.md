@@ -320,3 +320,65 @@ m -j4 2>&1 | tee ../build_log.txt
 
 **Note:** soong_build (ninja generation) uses ~29GB RAM regardless of `-j`.
 Always use `-j4` or lower on 32GB machines to avoid OOM during compilation.
+
+---
+
+## Issue 10: Repeated `overriding commands` errors (iterative conflicts)
+
+**Pattern:** Build fails with conflict, you remove it, build again, new conflict appears.
+
+**Cause:** AOSP provides thousands of vendor files from source. Our initial
+conflict detection only runs after soong completes — but ckati fails before
+all conflicts are known. Each build pass reveals new conflicts.
+
+**Known additional conflicts discovered iteratively:**
+
+| File | Type |
+|---|---|
+| `android.hardware.audio.service` | bin/hw |
+| `android.hardware.media.omx@1.0-service` | bin/hw |
+| `android.hardware.bluetooth@1.0-service` | bin/hw |
+| `android.hardware.health@2.1-service` | bin/hw |
+| `android.hardware.tv.cec@1.0-service` | bin/hw |
+| `wpa_supplicant.conf` | etc/wifi |
+| `wpa_supplicant_overlay.conf` | etc/wifi |
+| `p2p_supplicant_overlay.conf` | etc/wifi |
+
+**Fix:** After each conflict failure, run:
+```bash
+cd aosp
+python3 << 'PYEOF'
+import re, shutil
+with open('out/soong/installs-aosp_x88pro.mk') as f:
+    soong = f.read()
+# Get all AOSP vendor filenames
+aosp = set(p.split('/')[-1] for p in re.findall(r'vendor/[^\s:"\\]+', soong))
+# Also catch base_rules conflicts from build log
+with open('../build_log.txt') as f:
+    log = f.read()
+for c in re.findall(r"vendor/(?:[^/']+/)*([^/']+)'", log):
+    aosp.add(c)
+mk = 'device/rockchip/x88pro/aosp_x88pro.mk'
+with open(mk) as f:
+    lines = f.readlines()
+removed = []
+new = []
+for line in lines:
+    if 'proprietary' in line:
+        m = re.search(r'/([a-zA-Z0-9_.@+\-]+)\s*$', line.rstrip(' \\\n'))
+        if m and m.group(1) in aosp:
+            removed.append(m.group(1))
+            continue
+    new.append(line)
+with open(mk, 'w') as f:
+    f.writelines(new)
+shutil.copy(mk, '../device/rockchip/x88pro/aosp_x88pro.mk')
+print(f"Removed {len(removed)}: {removed}")
+PYEOF
+```
+Then soft clean and rebuild:
+```bash
+rm -f out/build-aosp_x88pro.ninja out/build-aosp_x88pro.ninja.lock
+m -j4 2>&1 | tee ../build_log.txt
+```
+Repeat until no more conflicts.
