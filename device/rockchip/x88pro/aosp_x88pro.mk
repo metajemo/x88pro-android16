@@ -91,8 +91,6 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/lib/libwvhidl.so:$(TARGET_COPY_OUT_VENDOR)/lib/libwvhidl.so \
     device/rockchip/x88pro/proprietary/lib/mediadrm/libwvdrmengine.so:$(TARGET_COPY_OUT_VENDOR)/lib/mediadrm/libwvdrmengine.so \
     device/rockchip/x88pro/proprietary/bin/android.hardware.drm@1.3-service.widevine:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.drm@1.3-service.widevine \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.drm@1.3-service.clearkey:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.drm@1.3-service.clearkey \
-    device/rockchip/x88pro/proprietary/bin/move_widevine_data.sh:$(TARGET_COPY_OUT_VENDOR)/bin/move_widevine_data.sh
 
 # =============================================================================
 # Health HAL + Memory tracking
@@ -127,9 +125,6 @@ PRODUCT_COPY_FILES += \
 # WiFi config files
 # =============================================================================
 PRODUCT_COPY_FILES += \
-    device/rockchip/x88pro/proprietary/etc/wifi/wpa_supplicant.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant.conf \
-    device/rockchip/x88pro/proprietary/etc/wifi/wpa_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant_overlay.conf \
-    device/rockchip/x88pro/proprietary/etc/wifi/p2p_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant_overlay.conf
 
 # =============================================================================
 # System properties
