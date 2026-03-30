@@ -122,9 +122,11 @@ setup() {
     # Remove existing (symlink or old copy)
     rm -rf "$AOSP_DIR/device/rockchip/x88pro"
 
-    # Hard copy
-    cp -r "$REPO_DIR/device/rockchip/x88pro" \
-        "$AOSP_DIR/device/rockchip/x88pro"
+    # Hard copy using rsync (handles missing subdirectories correctly)
+    # rsync is preferred over cp -r because it creates missing dirs
+    # and correctly syncs new blobs added after initial setup
+    rsync -a "$REPO_DIR/device/rockchip/x88pro/" \
+        "$AOSP_DIR/device/rockchip/x88pro/"
 
     success "Device tree copied to $AOSP_DIR/device/rockchip/x88pro"
 
