@@ -28,8 +28,8 @@
 ## Phase 4 TODOs
 
 ### Build kernel with RKNPU enabled
-- Verify CONFIG_RKNPU=y builds correctly
-- Test rknn_server connectivity
+- ~~Verify CONFIG_RKNPU=y builds correctly~~ ✅ Done — kernel built successfully with RKNPU enabled
+- Test rknn_server connectivity (after first boot)
 
 ### SELinux policy for custom services
 - rknn_server: u:r:rknn_server:s0
@@ -39,6 +39,16 @@
 ## Phase 5 TODOs
 
 ### Flash script
-- Write phase5_flash.sh
+- ~~Write phase5_flash.sh~~ ✅ Done
 - Test partition-by-partition flashing
 - Test full restore from Phase 1 backup
+
+## Rebuild scope after Phase 4
+
+No full rebuild needed for the remaining tasks:
+
+| Task | What to rebuild | Command | Time |
+|---|---|---|---|
+| FORTIFY_SOURCE patch | Kernel + boot.img | `make -j12` in kernel dir, then `m bootimage` | ~9 min + few min |
+| SELinux enforcing | boot.img only (cmdline) + vendor per denial | `m bootimage`, then `m vendorimage` per fix | Minutes per iteration |
+| CVE audit | Nothing — docs only | — | — |
