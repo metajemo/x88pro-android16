@@ -382,3 +382,41 @@ rm -f out/build-aosp_x88pro.ninja out/build-aosp_x88pro.ninja.lock
 m -j4 2>&1 | tee ../build_log.txt
 ```
 Repeat until no more conflicts.
+
+---
+
+## Issue 11: `kernel missing and no known rule to make it`
+
+**Error:**
+`````
+ninja: 'out/target/product/x88pro/kernel', needed by
+'out/target/product/x88pro/obj/PACKAGING/check_vintf_all_intermediates/kernel_configs.txt',
+missing and no known rule to make it
+`````
+
+**Cause:** AOSP expects the BSP kernel to be built before the AOSP build.
+The kernel Image must exist at `out/target/product/x88pro/kernel`.
+
+**Fix:** Build the BSP kernel first:
+`````bash
+cd kernel/rockchip-bsp
+
+# Configure
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- rockchip_defconfig
+
+# Apply X88 Pro overlay
+./scripts/kconfig/merge_config.sh -m .config \
+    ../../device/rockchip/x88pro/kernel-config-x88pro.config
+
+# Build (use all cores - kernel build is not memory intensive)
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image dtbs
+`````
+
+Then restart the AOSP build:
+`````bash
+cd ../../aosp
+rm -f out/build-aosp_x88pro.ninja out/build-aosp_x88pro.ninja.lock
+m -j4 2>&1 | tee ../build_log.txt
+`````
+
+**Note:** The kernel build takes ~15-30 minutes on 12 cores.
