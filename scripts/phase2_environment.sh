@@ -121,11 +121,10 @@ deps() {
         gcc-aarch64-linux-gnu \
         g++-aarch64-linux-gnu \
 	binwalk \
-        libncurses5 \
-        libncurses5-dev \
-        libncursesw5 \
-        libtinfo5 \
-        libtinfo-dev \
+        libncurses-dev \
+        libncurses6 \
+        libncursesw6 \
+        libtinfo6 \
         gperf \
         lib32ncurses-dev \
         lib32stdc++6 \
