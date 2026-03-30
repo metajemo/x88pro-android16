@@ -43,6 +43,12 @@
 - Test partition-by-partition flashing
 - Test full restore from Phase 1 backup
 
+### Update vendor blob inventory
+- Cross-check `docs/VENDOR_BLOB_INVENTORY.md` against the final build output
+- Verify no blobs were added/removed during iterative conflict resolution
+- Update any entries that changed (source, version, notes)
+- Confirm Category 1 (AOSP built) list matches actual removed conflicts
+
 ## Rebuild scope after Phase 4
 
 No full rebuild needed for the remaining tasks:
