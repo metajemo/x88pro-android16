@@ -24,7 +24,6 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/lib64/hw/hwcomposer.rk30board.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/hwcomposer.rk30board.so \
     device/rockchip/x88pro/proprietary/lib64/hw/hw_output.default.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/hw_output.default.so \
     device/rockchip/x88pro/proprietary/lib64/hw/rockchip.hardware.outputmanager@1.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/rockchip.hardware.outputmanager@1.0-impl.so \
-    device/rockchip/x88pro/proprietary/lib64/libdrm.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libdrm.so \
     device/rockchip/x88pro/proprietary/lib64/libbaseparameter.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libbaseparameter.so
 
 # =============================================================================
@@ -33,11 +32,6 @@ PRODUCT_COPY_FILES += \
 # PCM stereo only - no Dolby/DTS passthrough (hardware limitation)
 PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/lib64/hw/audio.primary.rk30board.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/audio.primary.rk30board.so \
-    device/rockchip/x88pro/proprietary/lib64/hw/audio.r_submix.default.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/audio.r_submix.default.so \
-    device/rockchip/x88pro/proprietary/lib64/hw/audio.usb.default.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/audio.usb.default.so \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.audio@6.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.audio@6.0-impl.so \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.audio.effect@6.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.audio.effect@6.0-impl.so \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.audio.service:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.audio.service
 
 # =============================================================================
 # Video: Rockchip MPP + OMX
@@ -48,7 +42,6 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/lib64/libomxvpu_dec.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libomxvpu_dec.so \
     device/rockchip/x88pro/proprietary/lib64/libomxvpu_enc.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libomxvpu_enc.so \
     device/rockchip/x88pro/proprietary/lib64/librga.so:$(TARGET_COPY_OUT_VENDOR)/lib64/librga.so \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.media.omx@1.0-service:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.media.omx@1.0-service
 
 # =============================================================================
 # WiFi: AP6398S (bcmdhd out-of-tree driver)
@@ -75,9 +68,7 @@ PRODUCT_SYMLINKS += \
 # =============================================================================
 PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/firmware/BCM4359C0.hcd:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/BCM4359C0.hcd \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.bluetooth@1.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.bluetooth@1.0-impl.so \
     device/rockchip/x88pro/proprietary/lib64/libbt-vendor.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libbt-vendor.so \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.bluetooth@1.0-service:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.bluetooth@1.0-service
 
 # =============================================================================
 # Security: Keymaster 4.0 + Gatekeeper (OP-TEE / TrustZone)
@@ -88,8 +79,8 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/bin/android.hardware.keymaster@4.0-service.optee:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.keymaster@4.0-service.optee \
     device/rockchip/x88pro/proprietary/bin/android.hardware.gatekeeper@1.0-service.optee:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.gatekeeper@1.0-service.optee \
     device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.weaver@1.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.weaver@1.0-impl.so \
-    device/rockchip/x88pro/proprietary/lib64/libRkkeymaster4.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libRkkeymaster4.so \
-    device/rockchip/x88pro/proprietary/lib64/libkeymaster4support.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libkeymaster4support.so
+    device/rockchip/x88pro/proprietary/lib64/libRkkeymaster4.so:$(TARGET_COPY_OUT_VENDOR)/lib64/libRkkeymaster4.so
+
 
 # =============================================================================
 # Widevine DRM L3
@@ -107,9 +98,6 @@ PRODUCT_COPY_FILES += \
 # Health HAL + Memory tracking
 # =============================================================================
 PRODUCT_COPY_FILES += \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.health@2.0-impl-2.1.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.health@2.0-impl-2.1.so \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.health@2.1-service:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.health@2.1-service \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.memtrack@1.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.memtrack@1.0-impl.so \
     device/rockchip/x88pro/proprietary/lib64/hw/memtrack.rk356x.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/memtrack.rk356x.so
 
 # =============================================================================
@@ -123,9 +111,7 @@ PRODUCT_COPY_FILES += \
 # HDMI CEC
 # =============================================================================
 PRODUCT_COPY_FILES += \
-    device/rockchip/x88pro/proprietary/lib64/hw/android.hardware.tv.cec@1.0-impl.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/android.hardware.tv.cec@1.0-impl.so \
     device/rockchip/x88pro/proprietary/lib64/hw/hdmi_cec.rk356x.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/hdmi_cec.rk356x.so \
-    device/rockchip/x88pro/proprietary/bin/android.hardware.tv.cec@1.0-service:$(TARGET_COPY_OUT_VENDOR)/bin/hw/android.hardware.tv.cec@1.0-service
 
 # =============================================================================
 # NPU: RKNPU (RKNN2 v1.6.0)
