@@ -1,0 +1,31 @@
+# bcmdhd — Broadcom SDIO WiFi out-of-tree kernel module (AP6398S / BCM4359c0)
+#
+# Module:    /vendor/lib/modules/bcmdhd.ko
+# Firmware:  /vendor/etc/firmware/fw_bcm4359c0_ag.bin (+ apsta, p2p variants)
+# Loaded by: init via /vendor/etc/init.insmod.cfg (insmod path)
+#
+# SELinux concerns:
+#   1. Module load:       init reads bcmdhd.ko from vendor — covered by
+#                         existing init / vendor_file_type rules.
+#   2. Firmware path:     wpa_supplicant writes
+#                         /sys/module/bcmdhd/parameters/firmware_path
+#                         to tell the driver which .bin file to use.
+#   3. Net interface:     bcmdhd registers wlan0 as a standard nl80211
+#                         interface; wpa_supplicant uses it via nl80211
+#                         socket (covered by AOSP hal_wifi_supplicant policy).
+#
+# This file covers items 1 and 2; item 3 is handled by AOSP core policy.
+
+# Label for bcmdhd sysfs parameter directory
+# Allows wpa_supplicant to set the firmware path at runtime
+type sysfs_bcmdhd, sysfs_type, fs_type;
+
+# wpa_supplicant (hal_wifi_supplicant) writes the firmware_path parameter
+# so bcmdhd loads the correct binary for STA / AP / P2P mode.
+allow hal_wifi_supplicant sysfs_bcmdhd:file { open read write getattr };
+
+# WiFi HAL (hal_wifi_default) may also need to read/write this
+allow hal_wifi_default sysfs_bcmdhd:file { open read write getattr };
+
+# surfaceflinger / system_server may read WiFi sysfs for diagnostics
+allow system_server sysfs_bcmdhd:file { open read getattr };

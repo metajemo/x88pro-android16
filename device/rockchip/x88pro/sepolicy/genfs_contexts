@@ -1,0 +1,10 @@
+# SELinux genfs contexts — X88 Pro RK3566
+#
+# genfscon rules label virtual filesystems (sysfs, debugfs, etc.)
+# that are generated at runtime and cannot be labeled by file_contexts.
+#
+# Format: genfscon <fstype> <path> <context>
+
+# bcmdhd sysfs: firmware_path parameter written by wpa_supplicant
+# Full path: /sys/module/bcmdhd/parameters/firmware_path
+genfscon sysfs /module/bcmdhd/parameters u:object_r:sysfs_bcmdhd:s0

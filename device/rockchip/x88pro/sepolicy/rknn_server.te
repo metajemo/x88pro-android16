@@ -1,0 +1,44 @@
+# rknn_server — Rockchip RKNN2 NPU inference server
+#
+# Binary:  /vendor/bin/rknn_server
+# Service: provides NPU compute for rockchip.hardware.neuralnetworks@1.0 HAL
+# Init:    started by init.rknn_server.rc with explicit seclabel u:r:rknn_server:s0
+#
+# Access pattern:
+#   init → rknn_server (via seclabel directive, no exec transition needed)
+#   neuralnetworks HAL → rknn_server (vendor binder)
+#   rknn_server → /dev/rknpu (NPU device, ioctl-heavy)
+#   rknn_server → dma_heap (zero-copy model buffer allocation)
+
+type rknn_server, domain;
+type rknn_server_exec, exec_type, vendor_file_type, file_type;
+
+# Exec-based transition for any non-seclabel launch path
+init_daemon_domain(rknn_server)
+
+# Vendor binder for IPC with rockchip.hardware.neuralnetworks HAL
+vndbinder_use(rknn_server)
+
+# NPU device node (/dev/rknpu, /dev/rknpu0)
+type rknpu_device, dev_type;
+allow rknn_server rknpu_device:chr_file { read write open ioctl };
+
+# DMA heap: zero-copy model/tensor buffer allocation
+# Android 12+ uses /dev/dma_heap/system for vendor allocations
+allow rknn_server dmabuf_heap_device:chr_file { open read write ioctl };
+
+# Read NPU model files and vendor config from /vendor
+allow rknn_server vendor_file:file { read open getattr map };
+allow rknn_server vendor_file:dir  { read open search getattr };
+
+# Shared memory for model data (passed from HAL client)
+allow rknn_server tmpfs:file { read write open create map };
+
+# Unix domain socket for local control channel
+allow rknn_server self:unix_stream_socket create_socket_perms_no_ioctl;
+
+# Logcat via /dev/socket/logdw (uses unix_dgram_socket)
+allow rknn_server self:unix_dgram_socket { create write };
+
+# neverallow: only init and rknn_server itself may execute this binary
+neverallow { domain -rknn_server -init } rknn_server_exec:file { execute execute_no_trans };

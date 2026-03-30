@@ -44,6 +44,27 @@ check_rkdeveloptool() {
     echo "  rkdeveloptool: $(rkdeveloptool --version 2>&1 | head -1)"
 }
 
+# Check simg2img is available (needed to unsparse super.img before flashing)
+check_simg2img() {
+    if ! command -v simg2img &>/dev/null; then
+        echo "ERROR: simg2img not found."
+        echo ""
+        echo "Install it with:"
+        echo "  sudo apt-get install android-sdk-libsparse-utils"
+        exit 1
+    fi
+}
+
+# Write a named partition using rkdeveloptool.
+# Requires device in loader mode (adb reboot loader).
+# Usage: flash_partition <partition_name> <image_file>
+flash_partition() {
+    local name="$1"
+    local img="$2"
+    echo "    Flashing ${name}... ($(du -h "$img" | cut -f1))"
+    rkdeveloptool write-partition "$name" "$img"
+}
+
 # =============================================================================
 # FLASH - Flash Android 16 images to device
 # =============================================================================
@@ -85,6 +106,7 @@ flash() {
     done
 
     check_rkdeveloptool
+    check_simg2img
 
     echo ""
     echo "==> Rebooting device into loader mode..."
@@ -92,37 +114,59 @@ flash() {
     adb root 2>/dev/null || true
     adb reboot loader
 
+    # RK3566 takes ~4s to enumerate in loader mode after reboot
     echo "    Waiting for device to enter loader mode..."
-    sleep 5
+    sleep 6
 
-    # Check device is in loader mode
-    # Expected: "DevNo=1	Vid=0x2207,Pid=0x350b,LocationID=XXX	Loader"
+    # Expected: "DevNo=1  Vid=0x2207,Pid=0x350b,LocationID=XXX  Loader"
+    # Pid 0x350b = RK3566 in loader mode
+    # Pid 0x330c = RK3566 in MaskROM mode (use hardware button method)
     echo "==> Checking for device in loader mode..."
+    if ! rkdeveloptool ld 2>&1 | grep -q "Loader"; then
+        echo ""
+        echo "ERROR: Device not detected in loader mode."
+        echo ""
+        echo "Manual loader mode entry (hardware method):"
+        echo "  1. Unplug power from X88 Pro"
+        echo "  2. Insert a pin into the RESET/UPDATE pinhole (near AV port)"
+        echo "  3. Hold the pin while plugging power back in"
+        echo "  4. Hold for 3 seconds then release"
+        echo "  5. Re-run this script"
+        exit 1
+    fi
     rkdeveloptool ld
 
     echo ""
-    echo "==> Flashing partitions..."
+    echo "==> Flashing Android 16 partitions..."
+    echo "    NOTE: Keeping stock uboot/trust bootloader (safer, avoids brick risk)"
+    echo ""
 
-    # Flash bootloader (uboot)
-    echo "    Flashing uboot..."
-    # TODO: Confirm exact rkdeveloptool commands for Android 16 images
-    # rkdeveloptool wl 0x4000 uboot.img
+    # Boot partition: kernel + ramdisk (~64MB)
+    flash_partition boot "$IMG_DIR/boot.img"
 
-    # Flash trust (TrustZone)
-    echo "    Flashing trust..."
-    # rkdeveloptool wl 0x6000 trust.img
+    # Device tree overlays (~4MB)
+    # Needed for correct hardware init on RK3566
+    flash_partition dtbo "$IMG_DIR/dtbo.img"
 
-    # Flash boot (kernel + ramdisk)
-    echo "    Flashing boot..."
-    # rkdeveloptool wl 0x8000 "$IMG_DIR/boot.img"
+    # AVB (Android Verified Boot) metadata (~1MB)
+    # Must match boot/dtbo/super content; flashed after them
+    flash_partition vbmeta "$IMG_DIR/vbmeta.img"
 
-    # Flash super (system + vendor + product)
-    echo "    Flashing super (~3GB, this will take a few minutes)..."
-    # rkdeveloptool wl 0xE000 "$IMG_DIR/super.img"
-
-    # Flash vbmeta
-    echo "    Flashing vbmeta..."
-    # rkdeveloptool wl 0x7000 "$IMG_DIR/vbmeta.img"
+    # Super partition: system + vendor + product (~3.1GB)
+    # AOSP builds super.img as a sparse image; rkdeveloptool needs raw.
+    echo "    Preparing super.img for flashing..."
+    SUPER_RAW="/tmp/x88pro_super_raw_$$.img"
+    if file "$IMG_DIR/super.img" | grep -q "Android sparse"; then
+        echo "    Converting sparse super.img → raw (~3.1GB, takes ~30s)..."
+        simg2img "$IMG_DIR/super.img" "$SUPER_RAW"
+    else
+        # Already raw
+        SUPER_RAW="$IMG_DIR/super.img"
+    fi
+    echo "    Flashing super (~3.1GB — expect 5-15 min over USB 2.0)..."
+    rkdeveloptool write-partition super "$SUPER_RAW"
+    # Clean up temp file if we created one
+    [ "$SUPER_RAW" != "$IMG_DIR/super.img" ] && rm -f "$SUPER_RAW"
 
     echo ""
     echo "==> Rebooting device..."
@@ -130,13 +174,9 @@ flash() {
 
     echo ""
     echo "==> Flash complete! Device is rebooting into Android 16."
-    echo "    First boot may take 3-5 minutes - this is normal."
-    echo "    Run 'make phase5-verify' once the device has booted."
-
-    # TODO: Full flash implementation will be completed in Phase 5
-    echo ""
-    echo "NOTE: Full flash script is a work in progress."
-    echo "      Partition offsets need to be verified against actual layout."
+    echo "    First boot takes 3-5 minutes (dex optimization) — this is normal."
+    echo "    Monitor with: adb connect $BOX_IP:5555 && adb logcat"
+    echo "    Verify with:  $0 verify $BOX_IP"
 }
 
 # =============================================================================
@@ -195,15 +235,51 @@ restore() {
     done
 
     check_rkdeveloptool
+    check_simg2img
 
     echo "    All backup files verified."
     echo ""
-    read -p "This will restore Android 11 and erase Android 16. Continue? [y/N] " confirm
+    read -p "This will restore Android 11 and ERASE Android 16. Continue? [y/N] " confirm
     [ "$confirm" = "y" ] || exit 0
 
-    # TODO: Implement restore using same flash logic as above but with backup images
-    echo "NOTE: Restore script is a work in progress."
-    echo "      Use rkdeveloptool manually with the backup images for now."
+    echo ""
+    echo "==> Entering loader mode for restore..."
+    echo "    Hardware method required (software reboot may not work if A16 is broken):"
+    echo "    1. Unplug power"
+    echo "    2. Hold RESET/UPDATE pinhole button"
+    echo "    3. Plug power while holding — release after 3s"
+    echo ""
+    read -p "Device ready in loader mode? [y/N] " ready
+    [ "$ready" = "y" ] || exit 0
+
+    echo "==> Checking for device in loader mode..."
+    if ! rkdeveloptool ld 2>&1 | grep -q "Loader"; then
+        echo "ERROR: Device not found in loader mode. Try hardware method above."
+        exit 1
+    fi
+
+    echo ""
+    echo "==> Restoring Android 11 partitions from backup..."
+    echo ""
+
+    # Restore bootloader chain (safe — these are original Rockchip images)
+    flash_partition uboot   "$BACKUP_DIR/uboot.img"
+    flash_partition trust   "$BACKUP_DIR/trust.img"
+    flash_partition dtbo    "$BACKUP_DIR/dtbo.img"
+    flash_partition vbmeta  "$BACKUP_DIR/vbmeta.img"
+    flash_partition boot    "$BACKUP_DIR/boot.img"
+
+    # super.img from Phase 1 is a raw dump — no sparse conversion needed
+    echo "    Flashing super (~3.1GB — expect 5-15 min over USB 2.0)..."
+    rkdeveloptool write-partition super "$BACKUP_DIR/super.img"
+
+    echo ""
+    echo "==> Rebooting device..."
+    rkdeveloptool rd
+
+    echo ""
+    echo "==> Restore complete! Device is rebooting into Android 11."
+    echo "    First boot after restore takes ~2 minutes."
 }
 
 # --- Main --------------------------------------------------------------------
