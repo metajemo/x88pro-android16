@@ -420,3 +420,45 @@ m -j4 2>&1 | tee ../build_log.txt
 `````
 
 **Note:** The kernel build takes ~15-30 minutes on 12 cores.
+
+---
+
+## Issue 12: `error: found duplicate sysprop assignments`
+
+**Error:**
+```
+FAILED: out/target/product/x88pro/vendor/build.prop
+error: found duplicate sysprop assignments:
+ro.board.platform=rk356x
+ro.board.platform=rk3566
+error: found duplicate sysprop assignments:
+ro.product.board=
+ro.product.board=rk30sdk
+```
+
+**Cause:** Android 16's `post_process_props` rejects properties defined more than
+once in the same partition. The properties `ro.board.platform` and `ro.product.board`
+were set in two places:
+
+1. `ADDITIONAL_VENDOR_PROPERTIES` — automatically populated by the build system
+   from `TARGET_BOARD_PLATFORM` (BoardConfig.mk) and other board variables
+2. `PRODUCT_PROPERTY_OVERRIDES` in `aosp_x88pro.mk` — manually added
+
+**Fix:** Remove the duplicate entries from `PRODUCT_PROPERTY_OVERRIDES` in
+`aosp_x88pro.mk`. The build system already sets these from `BoardConfig.mk`:
+
+```makefile
+# Remove these lines from PRODUCT_PROPERTY_OVERRIDES:
+#   ro.product.board=rk30sdk     <- set by ADDITIONAL_VENDOR_PROPERTIES
+#   ro.board.platform=rk3566     <- set by ADDITIONAL_VENDOR_PROPERTIES
+```
+
+After editing, soft clean and restart:
+```bash
+rsync -av device/rockchip/x88pro/ aosp/device/rockchip/x88pro/
+rm -f aosp/out/build-aosp_x88pro.ninja aosp/out/build-aosp_x88pro.ninja.lock
+cd aosp && m -j4 2>&1 | tee ../build_log.txt
+```
+
+**Note:** This failure occurs at ~87% after a long compile — ninja resumes
+incrementally so the restart is fast (only vendor image needs regenerating).
