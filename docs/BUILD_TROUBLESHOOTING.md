@@ -423,7 +423,37 @@ m -j4 2>&1 | tee ../build_log.txt
 
 ---
 
-## Issue 12: `error: found duplicate sysprop assignments`
+## Issue 12: `neverallow` in vendor sepolicy conflicts with AOSP core policy
+
+**Error:**
+```
+neverallow check failed at recovery_sepolicy.cil from device/rockchip/x88pro/sepolicy/rknn_server.te:44
+  (neverallow base_typeattr_1025 rknn_server_exec (file (execute execute_no_trans)))
+    allow at ... (allow domain vendor_file_type (file (... execute ...)))
+    allow at ... (allow overlay_remounter vendor_file_type (file (... execute_no_trans ...)))
+Failed to generate binary
+Failed to build policydb
+```
+
+**Cause:** A `neverallow` rule in a vendor `.te` file conflicts with existing
+`allow` rules in AOSP core policy. In this case, `domain` (all domains) already
+has broad `execute` rights on `vendor_file_type`, and `overlay_remounter` has
+`execute_no_trans`. Vendor policy cannot introduce `neverallow` rules that
+contradict AOSP's own `allow` rules.
+
+**Fix:** Remove the `neverallow` from the vendor `.te` file. Vendor sepolicy
+cannot restrict permissions that AOSP core policy already grants globally.
+
+```bash
+# After editing the .te file:
+rsync -av device/rockchip/x88pro/sepolicy/ aosp/device/rockchip/x88pro/sepolicy/
+rm -f aosp/out/build-aosp_x88pro.ninja aosp/out/build-aosp_x88pro.ninja.lock
+cd aosp && m -j4 2>&1 | tee ../build_log.txt
+```
+
+---
+
+## Issue 13: `error: found duplicate sysprop assignments`
 
 **Error:**
 ```
