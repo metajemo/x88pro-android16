@@ -300,6 +300,28 @@ of having purchased the device.
 
 ---
 
+
+---
+
+## ⚠️ Security Warning — BADBOX Malware
+
+The **RockChip X88 Pro 10** is a confirmed BADBOX-infected device model
+according to security researchers at EFF, Human Security, and TechCrunch (2023).
+BADBOX is firmware-level botnet malware pre-installed by bad actors in the
+supply chain. It silently proxies criminal traffic and performs ad fraud.
+
+**Before running Phase 1:**
+- Connect the box to an **isolated network** (not your main home network)
+- Do **not** log into any accounts on the stock firmware
+- Run the stock firmware as briefly as possible
+
+**The good news:** Installing our Android 16 build **completely eliminates**
+any pre-installed malware — we build from clean AOSP source and replace the
+entire system partition.
+
+See [docs/SECURITY.md](docs/SECURITY.md) for full details and detection commands.
+
+---
 ## Disclaimer
 
 This is an unofficial community project. It is not affiliated with or endorsed by:
