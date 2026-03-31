@@ -116,6 +116,10 @@ TARGET_COPY_OUT_VENDOR  := vendor
 TARGET_COPY_OUT_PRODUCT := product
 TARGET_COPY_OUT_ODM     := odm
 
+# --- VINTF -------------------------------------------------------------------
+# Vendor manifest: declares HALs provided by the vendor partition
+DEVICE_MANIFEST_FILE := device/rockchip/x88pro/proprietary/etc/vintf/manifest.xml
+
 # --- Display -----------------------------------------------------------------
 # HDMI output via VOP2 (BSP kernel required)
 # Resolution: up to 4K@60fps
