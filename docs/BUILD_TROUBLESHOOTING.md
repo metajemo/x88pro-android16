@@ -551,3 +551,32 @@ prebuilt_etc {
 **Note:** `check_elf_files: false` is required for blobs from Android 11 — their
 dependency graph does not match Android 16 libraries. Non-ELF files (firmware
 `.bin`, `.hcd`, `.txt`, `.rc`, `.xml`) remain in `PRODUCT_COPY_FILES`.
+
+---
+
+## Issue 15: `No user specified for service` (host_init_verifier)
+
+**Error:**
+```
+host_init_verifier: device/rockchip/x88pro/proprietary/etc/init.rknn_server.rc: 6:
+No user specified for service 'rknn_server', so it would have been root.
+host_init_verifier: Failed to parse init scripts with 1 error(s).
+```
+
+**Cause:** Android 16's `host_init_verifier` requires every `service` block in
+init.rc files to explicitly declare a `user` directive. Services that previously
+defaulted to root silently now fail at build time.
+
+**Fix:** Add `user` and `group` to the service block:
+```
+service rknn_server /vendor/bin/rknn_server
+    class core
+    user system
+    group system
+    seclabel u:r:rknn_server:s0
+    disabled
+```
+
+**Note:** If the init.rc file is inside `proprietary/` (gitignored), move it to
+the device tree proper (e.g., `device/rockchip/x88pro/init.rknn_server.rc`) so
+the fix can be committed. Config files do not belong in `proprietary/`.
