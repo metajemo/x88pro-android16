@@ -829,3 +829,94 @@ WIFI_DRIVER_MODULE_PATH := /vendor/etc/modules/bcmdhd.ko
 - `device/rockchip/x88pro/Android.bp` (comment fix)
 
 **Detected by:** Pre-flash vendor.img audit (debugfs + direct vendor/ directory inspection).
+
+---
+
+## Issue 24: bcmdhd.ko compiled for kernel 4.19 — fails to load on 5.10
+
+**Symptom:** WiFi fails on first boot. `dmesg` shows:
+```
+bcmdhd: disagrees about version of symbol ...
+```
+or simply the insmod call returning an error.
+
+**Cause:** The `bcmdhd.ko` extracted from stock Android 11 firmware has
+`vermagic: 4.19.172`. Linux kernel refuses to load any module whose vermagic
+does not exactly match the running kernel version (`5.10.226`).
+
+Note: `CONFIG_BCMDHD=y` in the kernel config is a **bool parent gate** (not a
+driver). The actual AP6398S driver is `CONFIG_AP6XXX=m` (module) in
+`drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/`. The stock `.ko` was the
+wrong one for both kernel version and driver path.
+
+**Fix:** Build `bcmdhd.ko` from the BSP 5.10 source:
+```bash
+cd kernel/rockchip-bsp
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j12 \
+  drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/bcmdhd.ko
+```
+Two `-Werror=address` patches required first (always-true pointer checks on
+`rev_info_delim + 1` in `wl_android.c` and `wl_android_ext.c`).
+
+Replace `device/rockchip/x88pro/proprietary/modules/bcmdhd.ko` with the
+output. New vermagic: `5.10.226 SMP preempt mod_unload modversions aarch64`.
+
+---
+
+## Issue 25: WiFi firmware generic names never installed (PRODUCT_SYMLINKS silent no-op)
+
+**Symptom:** bcmdhd driver loads but firmware request fails. `dmesg` shows:
+```
+bcmdhd: firmware: failed to load fw_bcmdhd.bin
+```
+
+**Cause:** `PRODUCT_SYMLINKS` is not a real Android build variable. It is
+silently ignored by the build system. The entries in `aosp_x88pro.mk` intended
+to symlink `fw_bcmdhd.bin` → `fw_bcm4359c0_ag.bin` and `nvram.txt` →
+`nvram_ap6398s.txt` were never processed. Only the chip-specific filenames
+were installed.
+
+The kernel config and BoardConfig.mk both reference the generic names:
+- `CONFIG_BCMDHD_FW_PATH="/vendor/etc/firmware/fw_bcmdhd.bin"`
+- `WIFI_DRIVER_FW_PATH_STA := /vendor/etc/firmware/fw_bcmdhd.bin`
+
+**Fix:** Replace `PRODUCT_SYMLINKS` with additional `PRODUCT_COPY_FILES` entries
+using the generic destination names (copies work identically to symlinks for firmware):
+```makefile
+PRODUCT_COPY_FILES += \
+    .../fw_bcm4359c0_ag.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd.bin \
+    .../fw_bcm4359c0_ag_apsta.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd_apsta.bin \
+    .../fw_bcm4359c0_ag_p2p.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd_p2p.bin \
+    .../nvram_ap6398s.txt:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/nvram.txt
+```
+
+---
+
+## Issue 26: Bluetooth HAL service binary stranded in dead device.mk
+
+**Symptom:** Bluetooth HAL declared in VINTF manifest but service never starts.
+`logcat` shows `android.hardware.bluetooth@1.0-service` missing.
+
+**Cause:** `android.hardware.bluetooth@1.0-service` was only referenced in
+`device.mk` via `PRODUCT_COPY_FILES`. Since `device.mk` is never included by
+the build (dead code — see Issue 21), the binary was never installed to
+`/vendor/bin/hw/`.
+
+**Fix:** Add to `Android.bp` as `cc_prebuilt_binary` and add the module name
+to `PRODUCT_PACKAGES` in `aosp_x88pro.mk`.
+
+---
+
+## Note: device tree changes require rsync to AOSP tree
+
+`device/rockchip/x88pro/` (workspace root) is the git-tracked source of truth.
+The AOSP build reads from `aosp/device/rockchip/x88pro/` — a separate copy.
+
+After any change to the device tree, sync it before rebuilding:
+```bash
+rsync -a --checksum device/rockchip/x88pro/ aosp/device/rockchip/x88pro/
+```
+
+This is run automatically by `scripts/phase4_build.sh` but not by incremental
+`m` commands. If a fix appears to have no effect on the build, this is the
+first thing to check.
