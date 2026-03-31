@@ -50,7 +50,7 @@ These are all enabled by default in the AOSP build system for release builds.
 | `dtbo.img` | 157 KB | Built from BSP kernel `rk3566-box-demo-v10.dtb` via mkdtimg |
 
 **Build time:** ~10 minutes (incremental, 12 cores, -j4)
-**Total build issues resolved:** 29 (see BUILD_TROUBLESHOOTING.md)
+**Total build issues resolved:** 31 (see BUILD_TROUBLESHOOTING.md)
 
 ## Known Build Deviations from Upstream
 
