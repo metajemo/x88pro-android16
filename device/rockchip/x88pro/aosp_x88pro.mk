@@ -13,6 +13,13 @@ PRODUCT_CHARACTERISTICS := tv
 $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base.mk)
 
+# Disable kernel VINTF requirements enforcement.
+# The Rockchip BSP kernel (5.10) predates FCM 6 hardening requirements:
+#   - CONFIG_DEVMEM=y (BSP needs /dev/mem; FCM 6 requires =n)
+#   - CONFIG_TRACE_GPU_MEM not present in BSP defconfig
+# Engineering build only — not required for device bring-up.
+PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false
+
 # =============================================================================
 # Vendor prebuilt ELF modules (binaries + shared libraries)
 # =============================================================================
