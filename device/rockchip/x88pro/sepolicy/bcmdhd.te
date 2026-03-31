@@ -1,6 +1,6 @@
 # bcmdhd — Broadcom SDIO WiFi out-of-tree kernel module (AP6398S / BCM4359c0)
 #
-# Module:    /vendor/lib/modules/bcmdhd.ko
+# Module:    /vendor/etc/modules/bcmdhd.ko (prebuilt_etc installs to etc/, not lib/)
 # Firmware:  /vendor/etc/firmware/fw_bcm4359c0_ag.bin (+ apsta, p2p variants)
 # Loaded by: init via /vendor/etc/init.insmod.cfg (insmod path)
 #

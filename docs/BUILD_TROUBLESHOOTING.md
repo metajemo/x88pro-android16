@@ -920,3 +920,58 @@ rsync -a --checksum device/rockchip/x88pro/ aosp/device/rockchip/x88pro/
 This is run automatically by `scripts/phase4_build.sh` but not by incremental
 `m` commands. If a fix appears to have no effect on the build, this is the
 first thing to check.
+
+
+---
+
+## Issue 27: dhd_static_buf.ko missing — bcmdhd dependency not installed
+
+**Symptom:** bcmdhd fails to load on boot with `Unknown symbol` errors or
+`insmod: ERROR: could not insert module` if `modprobe` is used.
+
+**Cause:** `modinfo bcmdhd.ko` shows `depends: dhd_static_buf`. The dependency
+module `dhd_static_buf.ko` was built alongside `bcmdhd.ko` in the BSP kernel
+tree but was not copied into `proprietary/modules/` and not declared in
+`Android.bp`. It was therefore absent from `vendor.img`.
+
+**Fix:**
+1. Copy `dhd_static_buf.ko` from the kernel build output into `proprietary/modules/`:
+   ```bash
+   cp kernel/rockchip-bsp/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_static_buf.ko \
+      device/rockchip/x88pro/proprietary/modules/
+   ```
+2. Add to `Android.bp` as `prebuilt_etc` with `sub_dir: "modules"`.
+3. Add `dhd_static_buf.ko` to `PRODUCT_PACKAGES` in `aosp_x88pro.mk`.
+4. Add SELinux label in `sepolicy/file_contexts`:
+   `/vendor/etc/modules/dhd_static_buf\.ko  u:object_r:vendor_file:s0`
+
+---
+
+## Issue 28: libdrm.so missing from vendor partition
+
+**Symptom:** Graphics allocator HAL (`android.hardware.graphics.allocator@4.0`)
+crashes at startup; `logcat` shows `dlopen failed: library "libdrm.so" not found`.
+
+**Cause:** `libdrm.so` was present in `proprietary/lib64/` and referenced in
+the dead `device.mk` via `PRODUCT_COPY_FILES`. Since `device.mk` is never
+included (see Issue 21), the library was never installed to `/vendor/lib64/`.
+It was also absent from `Android.bp`.
+
+**Fix:** Add to `Android.bp` as `cc_prebuilt_library_shared` and add `libdrm`
+to `PRODUCT_PACKAGES` in `aosp_x88pro.mk`.
+
+---
+
+## Issue 29: SELinux file_contexts references wrong bcmdhd.ko path
+
+**Symptom:** SELinux audit log noise — `avc: denied { read } for
+path="/vendor/etc/modules/bcmdhd.ko" scontext=... tcontext=u:object_r:vendor_file:s0`
+is NOT the real error; the actual problem is the context is applied to the
+wrong path.
+
+**Cause:** `sepolicy/file_contexts` had `/vendor/lib/modules/bcmdhd.ko` but
+`prebuilt_etc` installs to `/vendor/etc/modules/bcmdhd.ko` (Issue 23 fixed
+the BoardConfig path but not the SELinux label).
+
+**Fix:** Update `file_contexts` to reference `/vendor/etc/modules/bcmdhd.ko`
+and add `/vendor/etc/modules/dhd_static_buf.ko`.

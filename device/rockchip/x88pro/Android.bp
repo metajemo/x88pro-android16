@@ -149,15 +149,23 @@ cc_prebuilt_library_shared {
 }
 
 // ============================================================
-// WiFi: bcmdhd kernel module
-// prebuilt_etc installs to /vendor/etc/modules/bcmdhd.ko
+// WiFi: bcmdhd kernel module + static buffer dependency
+// prebuilt_etc installs to /vendor/etc/modules/
 // WIFI_DRIVER_MODULE_PATH in BoardConfig.mk must match this path.
+// dhd_static_buf.ko is a dependency listed in bcmdhd.ko's modinfo.
 // ============================================================
 
 prebuilt_etc {
     name: "bcmdhd.ko",
     vendor: true,
     src: "proprietary/modules/bcmdhd.ko",
+    sub_dir: "modules",
+}
+
+prebuilt_etc {
+    name: "dhd_static_buf.ko",
+    vendor: true,
+    src: "proprietary/modules/dhd_static_buf.ko",
     sub_dir: "modules",
 }
 
@@ -351,6 +359,19 @@ cc_prebuilt_binary {
     srcs: ["proprietary/bin/rockchip.hardware.neuralnetworks@1.0-service"],
     compile_multilib: "64",
     relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// DRM: libdrm (required by graphics allocator HAL)
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "libdrm",
+    vendor: true,
+    srcs: ["proprietary/lib64/libdrm.so"],
+    compile_multilib: "64",
     strip: { none: true },
     check_elf_files: false,
 }

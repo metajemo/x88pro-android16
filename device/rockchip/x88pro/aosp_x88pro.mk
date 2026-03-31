@@ -46,6 +46,7 @@ PRODUCT_PACKAGES += \
     libomxvpu_enc \
     librga \
     bcmdhd.ko \
+    dhd_static_buf.ko \
     libbt-vendor \
     android.hardware.bluetooth@1.0-service \
     android.hardware.keymaster@4.0-service.optee \
@@ -62,7 +63,8 @@ PRODUCT_PACKAGES += \
     librknnrt \
     rknn_server \
     rockchip.hardware.neuralnetworks@1.0-impl \
-    rockchip.hardware.neuralnetworks@1.0-service
+    rockchip.hardware.neuralnetworks@1.0-service \
+    libdrm
 
 # =============================================================================
 # WiFi: AP6398S (bcmdhd out-of-tree driver)
