@@ -205,7 +205,7 @@ m superimage
 ```
 
 Build output: `aosp/out/target/product/x88pro/` — see `docs/BUILD_INFO.md` for image sizes.
-For build issues, see `docs/BUILD_TROUBLESHOOTING.md` (22 documented issues with fixes).
+For build issues, see `docs/BUILD_TROUBLESHOOTING.md` (23 documented issues with fixes).
 
 ---
 
