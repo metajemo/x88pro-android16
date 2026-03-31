@@ -796,3 +796,36 @@ and boot.img after applying.
 **Files changed:**
 - `kernel/rockchip-bsp/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_firmware.c`
 - `device/rockchip/x88pro/kernel-config-x88pro.config` (re-enable FORTIFY_SOURCE)
+
+---
+
+## Issue 23: WIFI_DRIVER_MODULE_PATH points to wrong bcmdhd.ko location
+
+**Symptom:** WiFi fails to initialize on first boot. `logcat` shows the WiFi
+HAL or `wpa_supplicant` failing to `insmod` the bcmdhd driver.
+
+**Cause:** `prebuilt_etc` in Android.bp installs `bcmdhd.ko` to:
+```
+/vendor/etc/modules/bcmdhd.ko    ← where the file actually is
+```
+But `WIFI_DRIVER_MODULE_PATH` in `BoardConfig.mk` was set to:
+```
+/vendor/lib/modules/bcmdhd.ko    ← wrong path, file not here
+```
+
+The stock Android 11 device stores bcmdhd.ko in `/vendor/lib/modules/`, which
+is where the original value came from. However, `prebuilt_etc` always installs
+to the `etc/` directory of the partition, not `lib/`. There is no `prebuilt_etc`
+equivalent that targets `lib/modules/`.
+
+**Fix:** Update `WIFI_DRIVER_MODULE_PATH` in `BoardConfig.mk` to match the
+actual install location:
+```makefile
+WIFI_DRIVER_MODULE_PATH := /vendor/etc/modules/bcmdhd.ko
+```
+
+**Files changed:**
+- `device/rockchip/x88pro/BoardConfig.mk`
+- `device/rockchip/x88pro/Android.bp` (comment fix)
+
+**Detected by:** Pre-flash vendor.img audit (debugfs + direct vendor/ directory inspection).

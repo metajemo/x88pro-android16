@@ -150,7 +150,8 @@ cc_prebuilt_library_shared {
 
 // ============================================================
 // WiFi: bcmdhd kernel module
-// (kernel modules are ELF but use prebuilt_etc for /vendor/lib/modules/)
+// prebuilt_etc installs to /vendor/etc/modules/bcmdhd.ko
+// WIFI_DRIVER_MODULE_PATH in BoardConfig.mk must match this path.
 // ============================================================
 
 prebuilt_etc {
