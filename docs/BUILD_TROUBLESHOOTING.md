@@ -662,3 +662,32 @@ Android 16 in two ways:
 
 **Note:** This issue is a cascade from Issue 17. The manifest needed to exist (Issue 17)
 before checkvintf could report these compatibility problems.
+
+---
+
+## Issue 19: Kernel config incompatible with FCM 6 requirements
+
+**Error:**
+```
+ERROR: files are incompatible: Runtime info and framework compatibility matrix are incompatible:
+No compatible kernel requirement found (kernel FCM version = 6).
+For kernel requirements at matrix level 6, Kernel config errors:
+    For config CONFIG_DEVMEM, value = y but required n
+    Missing config CONFIG_TRACE_GPU_MEM
+INCOMPATIBLE
+```
+
+**Cause:** Once the manifest `target-level` is raised to 6 (required for kernel 5.10.y),
+checkvintf also validates kernel configs against the FCM 6 requirements. The Rockchip BSP
+kernel predates these requirements:
+- `CONFIG_DEVMEM=y` — BSP needs `/dev/mem`; FCM 6 security hardening requires `=n`
+- `CONFIG_TRACE_GPU_MEM` — tracing feature not present in Rockchip BSP defconfig
+
+Patching the BSP kernel for these would risk breaking hardware functionality.
+
+**Fix:** Disable kernel VINTF enforcement in `device.mk`:
+```makefile
+PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false
+```
+This is appropriate for engineering bring-up on a vendor BSP kernel.
+OTA compliance is not a goal for this build.
