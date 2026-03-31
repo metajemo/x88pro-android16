@@ -165,6 +165,16 @@ prebuilt_etc {
 // Bluetooth: AP6398S (BCM4359c0)
 // ============================================================
 
+cc_prebuilt_binary {
+    name: "android.hardware.bluetooth@1.0-service",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.bluetooth@1.0-service"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
 cc_prebuilt_library_shared {
     name: "libbt-vendor",
     vendor: true,

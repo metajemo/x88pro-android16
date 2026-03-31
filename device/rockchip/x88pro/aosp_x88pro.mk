@@ -47,6 +47,7 @@ PRODUCT_PACKAGES += \
     librga \
     bcmdhd.ko \
     libbt-vendor \
+    android.hardware.bluetooth@1.0-service \
     android.hardware.keymaster@4.0-service.optee \
     android.hardware.gatekeeper@1.0-service.optee \
     android.hardware.weaver@1.0-impl \
