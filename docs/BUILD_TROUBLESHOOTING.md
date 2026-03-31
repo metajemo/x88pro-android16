@@ -629,6 +629,36 @@ installed into the vendor partition output.
 
 **Fix:** Add to `BoardConfig.mk`:
 ```makefile
-DEVICE_MANIFEST_FILE := device/rockchip/x88pro/proprietary/etc/vintf/manifest.xml
+DEVICE_MANIFEST_FILE := device/rockchip/x88pro/vintf/manifest.xml
 ```
+Create the manifest at that path (not in `proprietary/` — it's gitignored and not a blob).
 Then sync to AOSP tree and rebuild: `m -j4` (ninja resumes incrementally).
+
+---
+
+## Issue 18: VINTF manifest incompatible with Android 16 framework
+
+**Error:**
+```
+ERROR: files are incompatible: Runtime info and framework compatibility matrix are incompatible:
+Kernel FCM Version is 5 and kernel version is 5.10.226, but the first kernel FCM version
+allowed for kernel version 5.10.y is 6
+The following instances are in the device manifest but not specified in framework compatibility matrix:
+    android.hardware.memtrack@1.0::IMemtrack/default
+INCOMPATIBLE
+```
+
+**Cause:** The Android 11 stock VINTF manifest (`target-level="5"`) is incompatible with
+Android 16 in two ways:
+1. `<kernel target-level="5"/>` — kernel 5.10.y ships with Android 12 (FCM level 6).
+   FCM 5 (Android 11) is too low; checkvintf rejects it.
+2. `android.hardware.memtrack@1.0` — this HAL was removed from all FCM 6+ compatibility
+   matrices. It was superseded by AIDL `IMemtrack` in Android 12.
+
+**Fix:** Update `device/rockchip/x88pro/vintf/manifest.xml`:
+- Change `<manifest ... target-level="5">` → `target-level="6"`
+- Change `<kernel target-level="5"/>` → `<kernel target-level="6"/>`
+- Remove the entire `android.hardware.memtrack@1.0` HAL block
+
+**Note:** This issue is a cascade from Issue 17. The manifest needed to exist (Issue 17)
+before checkvintf could report these compatibility problems.
