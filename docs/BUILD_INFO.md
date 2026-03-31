@@ -35,6 +35,23 @@ These are all enabled by default in the AOSP build system for release builds.
 | Kernel Image | 36MB (arch/arm64/boot/Image) |
 | Build time | ~9 minutes (12 cores) |
 
+## Phase 4 Build Output — 2026-03-31
+
+| Image | Size | Notes |
+|---|---|---|
+| `boot.img` | 64 MB | Kernel + ramdisk |
+| `super.img` | 1.5 GB | Combined dynamic partitions |
+| `system.img` | 1.2 GB | (inside super) |
+| `vendor.img` | 94 MB | (inside super) |
+| `product.img` | 284 MB | (inside super) |
+| `odm.img` | 889 KB | (inside super) |
+| `vbmeta.img` | 64 KB | AVB metadata |
+| `recovery.img` | 96 MB | Recovery partition |
+| `dtbo.img` | — | Not built — use `backup/dtbo.img` (stock) |
+
+**Build time:** ~10 minutes (incremental, 12 cores, -j4)
+**Total build issues resolved:** 20 (Issues 1–19 in BUILD_TROUBLESHOOTING.md + `device.mk` dead code discovery)
+
 ## Known Build Deviations from Upstream
 
 | Item | Status | Notes |

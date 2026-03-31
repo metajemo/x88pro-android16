@@ -36,7 +36,24 @@
 - bcmdhd: WiFi socket access
 - rockchip.hardware.outputmanager
 
+## Documentation TODOs
+
+### Document partition layout changes (Android 11 → Android 16)
+- **File:** `docs/PARTITION_LAYOUT.md` (create if not exists)
+- **What:** Side-by-side comparison of stock Android 11 partition layout vs the new Android 16 layout
+- **Include:** partition names, sizes, filesystem types, and what changed (resized, added, removed)
+- **Source for Android 11:** Phase 1 backup partition dump / `rkdeveloptool pl` output from original device
+- **Source for Android 16:** `BoardConfig.mk` partition size definitions + `lpdump` on built super.img
+
 ## Phase 5 TODOs
+
+### dtbo.img — use stock or build from BSP
+- Currently using `backup/dtbo.img` (stock Android 11) for flashing
+- **Option A (simple):** Copy `backup/dtbo.img` to device tree as prebuilt:
+  `BOARD_PREBUILT_DTBOIMAGE := device/rockchip/x88pro/prebuilt/dtbo.img`
+- **Option B (correct):** Configure BSP kernel to produce dtbo.img via
+  `BOARD_KERNEL_SEPARATED_DTBO := true` and kernel DTB overlay config
+- For initial bring-up, stock dtbo is fine — only needed if kernel DT changes
 
 ### Flash script
 - ~~Write phase5_flash.sh~~ ✅ Done
