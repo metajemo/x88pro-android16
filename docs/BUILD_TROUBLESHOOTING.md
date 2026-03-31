@@ -3,6 +3,27 @@
 This document captures every issue encountered during the Phase 4 build
 bring-up and how to fix them. If your build fails, check here first.
 
+For a narrative summary of the three critical testing rounds (what was found,
+why it would have failed, and how it was fixed), see the
+"Critical Testing Rounds" section in `BUILD_INFO.md`.
+
+## Issue groups at a glance
+
+| Issues | Theme |
+|---|---|
+| 1–3 | Product makefile, release config, architecture variant |
+| 4–9 | Build environment: OOM, Java version, ccache, Ubuntu 24.04 deps |
+| 10–11 | Conflicting vendor blobs, missing kernel |
+| 12–13 | SELinux neverallow conflicts, duplicate sysprop assignments |
+| 14–15 | Android 16 ELF prebuilt rules, init.rc user requirements |
+| 16–19 | Partition sizes, VINTF manifest, dynamic partitions |
+| 20–21 | super.img assembly, dead device.mk |
+| 22 | CONFIG_FORTIFY_SOURCE breaks Mali CSF driver (patch required) |
+| 23 | bcmdhd.ko install path mismatch in BoardConfig.mk |
+| 24–26 | **Round 1**: bcmdhd.ko kernel version, firmware names, BT binary |
+| 27–31 | **Round 2**: dhd_static_buf, libdrm, SELinux paths, HAL init.rc files, finit_module dep resolution |
+| 32 | **Round 3**: BT init.rc duplicate (ckati conflict) |
+
 ---
 
 ## Issue 1: `Cannot locate config makefile for product "aosp_x88pro"`

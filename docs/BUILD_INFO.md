@@ -52,6 +52,72 @@ These are all enabled by default in the AOSP build system for release builds.
 **Build time:** ~10 minutes (incremental, 12 cores, -j4)
 **Total build issues resolved:** 32 (see BUILD_TROUBLESHOOTING.md)
 
+## Critical Testing Rounds — 2026-03-31
+
+Three successive rounds of critical review were done before committing to Phase 5.
+Each round found issues that would have caused silent first-boot failures.
+Full details for each issue are in `BUILD_TROUBLESHOOTING.md`.
+
+---
+
+### Round 1 — Pre-build validation (Issues 24–26)
+
+Triggered after the main Phase 4 build produced images. Goal: audit what the build
+produced before running any pre-flash tooling.
+
+| Issue | Problem | First-boot impact |
+|---|---|---|
+| 24 | `bcmdhd.ko` extracted from stock Android 11 had `vermagic: 4.19.172` — BSP kernel is `5.10.226` | Linux refuses modules with mismatched `vermagic` — WiFi dead |
+| 25 | `PRODUCT_SYMLINKS` is not a real build variable — silently ignored | Generic firmware names (`fw_bcmdhd.bin`, `nvram.txt`) never installed — driver loads, can't find firmware |
+| 26 | BT HAL binary only referenced in dead `device.mk` (never included by the build) | Binary never installed to `/vendor/bin/hw/` — BT HAL never starts |
+
+**Fixes:**
+- Rebuilt `bcmdhd.ko` from BSP 5.10 kernel source (required two `-Werror=address` patches in `wl_android.c`)
+- Replaced `PRODUCT_SYMLINKS` with duplicate `PRODUCT_COPY_FILES` entries using generic destination names
+- Added BT binary to `Android.bp` as `cc_prebuilt_binary` + `PRODUCT_PACKAGES`
+
+---
+
+### Round 2 — "Strictest" pre-flash sweep (Issues 27–31)
+
+Full adversarial audit: assume everything that could be wrong is wrong.
+Found 5 issues requiring a `vendor.img` rebuild.
+
+| Issue | Problem | First-boot impact |
+|---|---|---|
+| 27 | `dhd_static_buf.ko` not in vendor — `modinfo bcmdhd.ko` lists `depends: dhd_static_buf` | `bcmdhd.ko` fails to load — WiFi dead |
+| 28 | `libdrm.so` only in dead `device.mk` — never installed to vendor | gralloc allocator HAL `dlopen` fails — no graphics |
+| 29 | SELinux `file_contexts` had `/vendor/lib/modules/bcmdhd.ko` — install path is `/vendor/etc/modules/` | SELinux label on a non-existent path |
+| 30 | 7 HAL service `.rc` files never installed — `cc_prebuilt_binary` has no `init_rc:` support unlike source-built binaries | keymaster, gatekeeper, DRM, power, lights, BT, neural-networks HALs never start |
+| 31 | `dhd_static_buf.ko` installed to vendor but nothing loads it — `wifi_load_driver()` uses `finit_module(2)` directly, no kernel module dependency resolution | `bcmdhd.ko` insmod returns `Unknown symbol in module` |
+
+**Key technical insight (Issue 31):** Android's `wifi_load_driver()` in
+`libwifi_hal/wifi_hal_common.cpp` calls `finit_module(2)` directly — not `modprobe`.
+The kernel does not resolve module dependencies with `finit_module`. If `dhd_static_buf.ko`
+is not already loaded, `bcmdhd.ko` fails immediately.
+
+**Fixes:**
+- Copied `dhd_static_buf.ko` from BSP kernel build output into `proprietary/modules/`, added to `Android.bp` + `PRODUCT_PACKAGES`
+- Fixed SELinux `file_contexts` paths to `/vendor/etc/modules/`
+- Added 7 init.rc files via `PRODUCT_COPY_FILES` in `aosp_x88pro.mk`
+- Created `init.bcmdhd.rc` with `on boot insmod /vendor/etc/modules/dhd_static_buf.ko`
+
+---
+
+### Round 3 — Documentation audit + dead code cleanup (Issue 32)
+
+Goal: verify docs and scripts match the actual build state. No rebuild needed.
+
+| Item | Problem | Fix |
+|---|---|---|
+| Issue 32 | BT init.rc in `PRODUCT_COPY_FILES` duplicated what AOSP's Soong module already installs → ckati "overriding commands" build failure | Removed our entry — AOSP module owns that `.rc` |
+| libdrm dead code | `cc_prebuilt_library_shared { name: "libdrm" }` added in Round 2, but `external/libdrm` has `vendor_available: true` — Soong drops the prebuilt silently and uses the AOSP copy | Removed vendor prebuilt from `Android.bp`; libdrm moved to Category 1 in inventory; counts corrected to 16/36/5/2 = 59 |
+| Makefile | Phase 4 and 5 had no status markers | Added `[✅ COMPLETE]` and `[🔜 READY — install rkdeveloptool first]` |
+| TODO.md | Three Phase 5 blockers undocumented | Added: `rkdeveloptool` not installed (hard blocker), `tee-supplicant` absent (acceptable for bring-up), camera blobs not wired up |
+| Issue count | `BUILD_INFO.md` showed 31 issues | Updated to 32 |
+
+---
+
 ## Known Build Deviations from Upstream
 
 | Item | Status | Notes |
