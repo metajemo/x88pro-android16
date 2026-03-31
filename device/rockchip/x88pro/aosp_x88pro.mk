@@ -80,8 +80,9 @@ PRODUCT_COPY_FILES += \
 # =============================================================================
 # NPU: RKNN server init script (non-ELF)
 # =============================================================================
+# Maintained in device tree (not proprietary/) since it's a config file
 PRODUCT_COPY_FILES += \
-    device/rockchip/x88pro/proprietary/etc/init.rknn_server.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.rknn_server.rc
+    device/rockchip/x88pro/init.rknn_server.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.rknn_server.rc
 
 # =============================================================================
 # System properties
