@@ -75,12 +75,14 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/firmware/nvram_ap6398s.txt:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/nvram_ap6398s.txt \
     device/rockchip/x88pro/proprietary/firmware/nvram_ap6398sa.txt:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/nvram_ap6398sa.txt
 
-# bcmdhd reads generic paths - symlink to real AP6398S files
-PRODUCT_SYMLINKS += \
-    /vendor/etc/firmware/fw_bcmdhd.bin:/vendor/etc/firmware/fw_bcm4359c0_ag.bin \
-    /vendor/etc/firmware/fw_bcmdhd_apsta.bin:/vendor/etc/firmware/fw_bcm4359c0_ag_apsta.bin \
-    /vendor/etc/firmware/fw_bcmdhd_p2p.bin:/vendor/etc/firmware/fw_bcm4359c0_ag_p2p.bin \
-    /vendor/etc/firmware/nvram.txt:/vendor/etc/firmware/nvram_ap6398s.txt
+# bcmdhd reads generic firmware paths configured in kernel config and BoardConfig.
+# PRODUCT_SYMLINKS is not a real build variable — use PRODUCT_COPY_FILES with
+# generic destination names instead (copies, not symlinks, but functionally identical).
+PRODUCT_COPY_FILES += \
+    device/rockchip/x88pro/proprietary/firmware/fw_bcm4359c0_ag.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd.bin \
+    device/rockchip/x88pro/proprietary/firmware/fw_bcm4359c0_ag_apsta.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd_apsta.bin \
+    device/rockchip/x88pro/proprietary/firmware/fw_bcm4359c0_ag_p2p.bin:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/fw_bcmdhd_p2p.bin \
+    device/rockchip/x88pro/proprietary/firmware/nvram_ap6398s.txt:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/nvram.txt
 
 # =============================================================================
 # Bluetooth: AP6398S firmware (non-ELF)
