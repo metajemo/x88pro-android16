@@ -109,7 +109,6 @@ PRODUCT_COPY_FILES += \
 #   install.
 PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/init.bcmdhd.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.bcmdhd.rc \
-    device/rockchip/x88pro/proprietary/etc/init/android.hardware.bluetooth@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.bluetooth@1.0-service.rc \
     device/rockchip/x88pro/proprietary/etc/init/android.hardware.keymaster@4.0-service.optee.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.keymaster@4.0-service.optee.rc \
     device/rockchip/x88pro/proprietary/etc/init/android.hardware.gatekeeper@1.0-service.optee.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.gatekeeper@1.0-service.optee.rc \
     device/rockchip/x88pro/proprietary/etc/init/android.hardware.drm@1.3-service.widevine.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.drm@1.3-service.widevine.rc \
