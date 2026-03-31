@@ -1,0 +1,10 @@
+# init.bcmdhd.rc — preload bcmdhd WiFi module dependencies
+#
+# bcmdhd.ko (AP6398S/BCM4359c0 driver) lists dhd_static_buf as a modinfo
+# dependency. Android's wifi_load_driver() uses finit_module(2) directly
+# (not modprobe), so kernel dependencies are NOT resolved automatically.
+# dhd_static_buf.ko must be in the kernel before bcmdhd.ko is loaded by
+# the WiFi HAL on first wifi enable.
+
+on boot
+    insmod /vendor/etc/modules/dhd_static_buf.ko

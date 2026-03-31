@@ -975,3 +975,53 @@ the BoardConfig path but not the SELinux label).
 
 **Fix:** Update `file_contexts` to reference `/vendor/etc/modules/bcmdhd.ko`
 and add `/vendor/etc/modules/dhd_static_buf.ko`.
+
+---
+
+## Issue 30: HAL service init.rc files never installed — services never start at boot
+
+**Symptom:** After first boot, `adb shell getprop | grep "init.svc"` shows
+keymaster, gatekeeper, Bluetooth, DRM, power, lights, and neural networks
+services not running. Framework attempts to bind to these HALs and gets
+`No such file or directory` or `Transport is closed`.
+
+**Cause:** Vendor prebuilt service binaries declared as `cc_prebuilt_binary`
+in `Android.bp` do NOT have embedded init.rc files (unlike AOSP source-built
+binaries which use `init_rc:` in their Android.bp). The corresponding .rc files
+were present in `proprietary/etc/init/` but were never installed to the vendor
+partition via `PRODUCT_COPY_FILES`.
+
+Affected services (all PRODUCT_PACKAGES prebuilts):
+- `android.hardware.bluetooth@1.0-service`
+- `android.hardware.keymaster@4.0-service.optee`
+- `android.hardware.gatekeeper@1.0-service.optee`
+- `android.hardware.drm@1.3-service.widevine`
+- `android.hardware.power-service.rockchip`
+- `android.hardware.lights-service.rockchip`
+- `rockchip.hardware.neuralnetworks@1.0-service`
+
+**Fix:** Install each `.rc` from `proprietary/etc/init/` via `PRODUCT_COPY_FILES`
+to `$(TARGET_COPY_OUT_VENDOR)/etc/init/` in `aosp_x88pro.mk`.
+
+---
+
+## Issue 31: dhd_static_buf.ko not loaded before bcmdhd — WiFi HAL insmod fails
+
+**Symptom:** WiFi fails to enable on first boot. `logcat` shows:
+```
+wifi_hal: finit_module return: -1 (Unknown symbol in module)
+```
+
+**Cause:** `modinfo bcmdhd.ko` lists `depends: dhd_static_buf`. Android's
+`wifi_load_driver()` in `libwifi_hal/wifi_hal_common.cpp` calls `finit_module(2)`
+directly (not `modprobe`). The kernel does NOT resolve module dependencies when
+using `finit_module`. If `dhd_static_buf.ko` is not already in the kernel,
+bcmdhd.ko fails with an unknown symbol error.
+
+`dhd_static_buf.ko` had no mechanism to be loaded — it was installed to
+`/vendor/etc/modules/` but nothing triggered loading it at boot.
+
+**Fix:** Create `init.bcmdhd.rc` in the device tree with an `on boot` insmod
+command for `dhd_static_buf.ko`, and install it to `/vendor/etc/init/` via
+`PRODUCT_COPY_FILES`. The `on boot` trigger fires before the WiFi HAL starts,
+ensuring the dependency is satisfied when `wifi_load_driver()` is first called.

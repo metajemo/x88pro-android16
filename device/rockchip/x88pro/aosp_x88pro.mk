@@ -94,6 +94,30 @@ PRODUCT_COPY_FILES += \
     device/rockchip/x88pro/proprietary/firmware/BCM4359C0.hcd:$(TARGET_COPY_OUT_VENDOR)/etc/firmware/BCM4359C0.hcd
 
 # =============================================================================
+# HAL service init scripts
+# =============================================================================
+# Vendor prebuilt service binaries do not have embedded init.rc (unlike AOSP
+# source-built binaries). Without these, HAL services never start at boot.
+#
+# init.bcmdhd.rc: preloads dhd_static_buf.ko before WiFi HAL calls insmod
+#   on bcmdhd.ko. wifi_load_driver() uses finit_module(2) directly — no
+#   kernel dependency resolution — so dhd_static_buf must already be loaded.
+#
+# Note: tee-supplicant binary is absent from the stock vendor dump, so its
+#   .rc is not installed. keymaster@4.0-service.optee will fail TEE ops on
+#   first boot; this is acceptable since no PIN/password is set on a fresh
+#   install.
+PRODUCT_COPY_FILES += \
+    device/rockchip/x88pro/init.bcmdhd.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.bcmdhd.rc \
+    device/rockchip/x88pro/proprietary/etc/init/android.hardware.bluetooth@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.bluetooth@1.0-service.rc \
+    device/rockchip/x88pro/proprietary/etc/init/android.hardware.keymaster@4.0-service.optee.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.keymaster@4.0-service.optee.rc \
+    device/rockchip/x88pro/proprietary/etc/init/android.hardware.gatekeeper@1.0-service.optee.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.gatekeeper@1.0-service.optee.rc \
+    device/rockchip/x88pro/proprietary/etc/init/android.hardware.drm@1.3-service.widevine.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/android.hardware.drm@1.3-service.widevine.rc \
+    device/rockchip/x88pro/proprietary/etc/init/power-aidl-rockchip.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/power-aidl-rockchip.rc \
+    device/rockchip/x88pro/proprietary/etc/init/lights-rockchip.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/lights-rockchip.rc \
+    device/rockchip/x88pro/proprietary/etc/init/rockchip.hardware.neuralnetworks@1.0-service.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/rockchip.hardware.neuralnetworks@1.0-service.rc
+
+# =============================================================================
 # NPU: RKNN server init script (non-ELF)
 # =============================================================================
 # Maintained in device tree (not proprietary/) since it's a config file
