@@ -56,7 +56,7 @@ These are all enabled by default in the AOSP build system for release builds.
 
 | Item | Status | Notes |
 |---|---|---|
-| `CONFIG_FORTIFY_SOURCE` | ❌ Disabled | BSP Mali driver bug, see TODO.md |
+| `CONFIG_FORTIFY_SOURCE` | ✅ Enabled | Mali CSF driver patched (Issue 22) |
 | SELinux | ⚠️ Permissive | For bring-up, switch to enforcing later |
 | AVB | ✅ Enabled | `BOARD_AVB_ENABLE := true` |
 | Widevine | ⚠️ L3 only | No L1 secure video path |
