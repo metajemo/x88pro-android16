@@ -691,3 +691,108 @@ PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false
 ```
 This is appropriate for engineering bring-up on a vendor BSP kernel.
 OTA compliance is not a goal for this build.
+
+---
+
+## Issue 20: `super.img` not produced by build
+
+**Symptom:** Build succeeds but only individual partition images exist
+(`system.img`, `vendor.img`, `product.img`, `odm.img`). No `super.img` in
+`out/target/product/x88pro/`.
+
+**Cause:** `PRODUCT_BUILD_SUPER_PARTITION` is derived from `PRODUCT_USE_DYNAMIC_PARTITIONS`.
+If neither is set in the product makefile, the build assembles the individual images
+but never calls `lpmake` to combine them into `super.img`. `BoardConfig.mk` having
+`BOARD_SUPER_PARTITION_SIZE` is not sufficient — the product variable must also be set.
+
+**Fix:** Add to `aosp_x88pro.mk`:
+```makefile
+PRODUCT_USE_DYNAMIC_PARTITIONS := true
+```
+Then rebuild: `m superimage` (fast — just the assembly step, no recompilation).
+
+---
+
+## Issue 21: Changes to `device.mk` have no effect
+
+**Symptom:** Product variables set in `device.mk` are silently ignored. The build
+uses stale values even after editing the file and resyncing to the AOSP tree.
+
+**Cause:** `AndroidProducts.mk` declares `aosp_x88pro.mk` as the product file.
+`device.mk` exists in the repo but is **never included** by any makefile. It is
+dead code left over from an earlier project structure. The build system only reads
+`aosp_x88pro.mk`.
+
+**Fix:** Make all product variable changes in `aosp_x88pro.mk`, not `device.mk`.
+
+**Secondary symptom:** If the fix is in the right file but the ninja rule still shows
+the old value, delete `out/build-aosp_x88pro.ninja` to force regeneration:
+```bash
+rm out/build-aosp_x88pro.ninja
+m -j4
+```
+
+---
+
+## Issue 22: CONFIG_FORTIFY_SOURCE breaks Mali Bifrost CSF driver build
+
+**Symptom:** Enabling `CONFIG_FORTIFY_SOURCE=y` in the BSP kernel causes a
+compile error in the Mali Bifrost driver:
+
+```
+In function 'memcmp',
+    inlined from 'kbase_csf_firmware_load_init' at
+    drivers/gpu/arm/bifrost/csf/mali_kbase_csf_firmware.c:2569:6:
+./include/linux/string.h:427:25: error: call to '__read_overflow' declared with
+    attribute error: detected read beyond size of object passed as 1st parameter
+```
+
+**Cause:** `drivers/gpu/arm/bifrost/csf/mali_kbase_csf_firmware.c` declares
+the linker-generated firmware boundary symbols as `extern char`:
+
+```c
+extern char mali_csffw;
+extern char mali_csffw_end;
+```
+
+This tells the compiler that `mali_csffw` is a single-byte object. Within
+`kbase_csf_firmware_load_init()`, the compiler traces `mcu_fw->data` back to
+`(u8 *)(&mali_csffw)` and determines the object has size 1. The subsequent
+`memcmp(mcu_fw->data, &magic, sizeof(u32))` then reads 4 bytes from a 1-byte
+object — FORTIFY_SOURCE catches this as a read overflow at compile time.
+
+**Rockchip's workaround:** Ship BSP with `# CONFIG_FORTIFY_SOURCE is not set`,
+silencing the error without fixing the driver.
+
+**Fix:** Declare the linker boundary symbols as incomplete array types (standard
+Linux kernel idiom — `__builtin_object_size` returns -1 for incomplete arrays,
+so FORTIFY_SOURCE cannot determine a bound to check against):
+
+```c
+/* Before */
+extern char mali_csffw;
+extern char mali_csffw_end;
+
+/* After */
+extern char mali_csffw[];
+extern char mali_csffw_end[];
+```
+
+Also update the pointer arithmetic and cast to remove the now-incorrect `&`:
+
+```c
+/* Before */
+mcu_fw->size = &mali_csffw_end - &mali_csffw;
+mcu_fw->data = (u8 *)(&mali_csffw);
+
+/* After */
+mcu_fw->size = mali_csffw_end - mali_csffw;
+mcu_fw->data = (u8 *)mali_csffw;
+```
+
+After this patch, `CONFIG_FORTIFY_SOURCE=y` compiles cleanly. Rebuild kernel
+and boot.img after applying.
+
+**Files changed:**
+- `kernel/rockchip-bsp/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_firmware.c`
+- `device/rockchip/x88pro/kernel-config-x88pro.config` (re-enable FORTIFY_SOURCE)
