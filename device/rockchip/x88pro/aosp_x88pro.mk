@@ -20,6 +20,10 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base.mk)
 # Engineering build only — not required for device bring-up.
 PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false
 
+# Enable dynamic partitions — required to assemble super.img from the
+# individual partition images (system, vendor, product, odm, system_ext).
+PRODUCT_USE_DYNAMIC_PARTITIONS := true
+
 # =============================================================================
 # Vendor prebuilt ELF modules (binaries + shared libraries)
 # =============================================================================
