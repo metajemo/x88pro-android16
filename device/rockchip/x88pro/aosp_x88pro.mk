@@ -1,4 +1,4 @@
-# device.mk - X88 Pro Android TV Box
+# aosp_x88pro.mk - X88 Pro Android TV Box
 #
 # Board: X88PRO-RK3566-4D32-V1.0
 # SoC:   Rockchip RK3566

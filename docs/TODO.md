@@ -2,14 +2,12 @@
 
 ## Security TODOs (Phase 4+)
 
-### HIGH: Re-enable CONFIG_FORTIFY_SOURCE in kernel
-- **File:** `device/rockchip/x88pro/kernel-config-x88pro.config`
-- **Why disabled:** BSP Mali Bifrost driver (`mali_kbase_csf_firmware.o`)
-  has a string read that trips FORTIFY_SOURCE buffer overflow detection
-- **Fix needed:** Either patch the Mali driver or upgrade BSP kernel
-- **How to re-enable:** Change in kernel-config-x88pro.config:
-  `# CONFIG_FORTIFY_SOURCE is not set` → `CONFIG_FORTIFY_SOURCE=y`
-  Then verify kernel builds clean
+### ~~HIGH: Re-enable CONFIG_FORTIFY_SOURCE in kernel~~ ✅ DONE
+- **Commit:** `e4d2951` (2026-03-31)
+- **Fix:** Patched `mali_kbase_csf_firmware.c` — declared linker boundary symbols
+  as `extern char mali_csffw[]` (incomplete array) instead of `extern char mali_csffw`
+  (single byte). FORTIFY_SOURCE now enabled and kernel builds clean.
+- **Documented:** Issue 22 in `docs/BUILD_TROUBLESHOOTING.md`
 
 ### MEDIUM: Switch SELinux from permissive to enforcing
 - **File:** `device/rockchip/x88pro/BoardConfig.mk`
@@ -38,22 +36,16 @@
 
 ## Documentation TODOs
 
-### Document partition layout changes (Android 11 → Android 16)
-- **File:** `docs/PARTITION_LAYOUT.md` (create if not exists)
-- **What:** Side-by-side comparison of stock Android 11 partition layout vs the new Android 16 layout
-- **Include:** partition names, sizes, filesystem types, and what changed (resized, added, removed)
-- **Source for Android 11:** Phase 1 backup partition dump / `rkdeveloptool pl` output from original device
-- **Source for Android 16:** `BoardConfig.mk` partition size definitions + `lpdump` on built super.img
+### ~~Document partition layout changes (Android 11 → Android 16)~~ ✅ DONE
+- **File:** `docs/PARTITION_LAYOUT.md` — created 2026-03-31
+- Includes physical partition table, dynamic partition comparison (A11 vs A16), flash target list
 
 ## Phase 5 TODOs
 
-### dtbo.img — use stock or build from BSP
-- Currently using `backup/dtbo.img` (stock Android 11) for flashing
-- **Option A (simple):** Copy `backup/dtbo.img` to device tree as prebuilt:
-  `BOARD_PREBUILT_DTBOIMAGE := device/rockchip/x88pro/prebuilt/dtbo.img`
-- **Option B (correct):** Configure BSP kernel to produce dtbo.img via
-  `BOARD_KERNEL_SEPARATED_DTBO := true` and kernel DTB overlay config
-- For initial bring-up, stock dtbo is fine — only needed if kernel DT changes
+### ~~dtbo.img — use stock or build from BSP~~ ✅ DONE
+- **Commit:** `c7fcdac` — rebuilt from BSP kernel `rk3566-box-demo-v10.dtb` via `mkdtimg`
+- **Location:** `device/rockchip/x88pro/prebuilt/dtbo.img` (157 KB)
+- **Config:** `BOARD_PREBUILT_DTBOIMAGE := device/rockchip/x88pro/prebuilt/dtbo.img`
 
 ### Flash script
 - ~~Write phase5_flash.sh~~ ✅ Done
@@ -72,7 +64,7 @@ No full rebuild needed for any of the remaining tasks:
 
 | Task | What to rebuild | Command | Time |
 |---|---|---|---|
-| FORTIFY_SOURCE patch | Kernel + boot.img | `make -j12` in kernel dir, then `m bootimage` | ~9 min + few min |
+| ~~FORTIFY_SOURCE patch~~ ✅ | ~~Kernel + boot.img~~ | — done — | — |
 | SELinux enforcing | boot.img only (cmdline) + vendor per denial | `m bootimage`, then `m vendorimage` per fix | Minutes per iteration |
 | CVE audit | Nothing — docs only | — | — |
 | Vendor blob inventory | Nothing — docs only | — | — |

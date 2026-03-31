@@ -67,8 +67,8 @@ See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for f
 | Phase 1 | Device extraction & backup | ✅ Complete |
 | Phase 2 | Build environment setup | ✅ Complete |
 | Phase 3 | Device tree & vendor blobs | ✅ Complete |
-| Phase 4 | Android 16 build | ⏳ Pending |
-| Phase 5 | Flash & verify | ⏳ Pending |
+| Phase 4 | Android 16 build | ✅ Complete |
+| Phase 5 | Flash & verify | 🔜 Ready to flash |
 
 ---
 
@@ -190,15 +190,33 @@ and other RK3566 TV boxes (H96 Max, X88 Pro 20, etc.) with different hardware:
 ### Phase 4 — Build Android 16
 
 ```bash
-# TODO: Phase 4 scripts coming soon
+# Build the kernel first
+cd kernel/rockchip-bsp
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j12 Image dtbs
+
+# Then build AOSP (incremental — resumes from previous state)
+cd ../../aosp
+source build/envsetup.sh
+lunch aosp_x88pro-bp2a-eng
+m -j4
+
+# Assemble super.img (dynamic partitions)
+m superimage
 ```
+
+Build output: `aosp/out/target/product/x88pro/` — see `docs/BUILD_INFO.md` for image sizes.
+For build issues, see `docs/BUILD_TROUBLESHOOTING.md` (22 documented issues with fixes).
 
 ---
 
 ### Phase 5 — Flash to device
 
 ```bash
-# TODO: Phase 5 scripts coming soon
+# Ensure rkdeveloptool is installed (built in Phase 2)
+which rkdeveloptool
+
+# Flash Android 16 to the device (device must be in loader mode)
+./scripts/phase5_flash.sh flash aosp x88pro 192.168.1.213
 ```
 
 > ⚠️ **Warning:** This replaces Android 11 with Android 16. Make sure Phase 1
@@ -211,7 +229,7 @@ and other RK3566 TV boxes (H96 Max, X88 Pro 20, etc.) with different hardware:
 If anything goes wrong, you can restore the original firmware using the Phase 1 backup:
 
 ```bash
-# TODO: restore script coming soon
+./scripts/phase5_flash.sh restore x88pro-backup
 ```
 
 ---
@@ -240,14 +258,16 @@ x88pro-android16/
 │   │                               #   extract-dt    - extract DTS from boot.img
 │   │                               #   extract-blobs - extract vendor blobs
 │   │                               #   npu-blobs     - download RKNN2 runtime
-│   ├── phase4_build.sh             # AOSP + BSP kernel build (pending)
-│   └── phase5_flash.sh             # Flash + verify + restore (pending)
+│   ├── phase4_build.sh             # AOSP + BSP kernel build
+│   ├── phase5_flash.sh             # Flash Android 16 / restore Android 11
+│   └── monitor_build.sh            # Build log monitor (success/failure detection)
 ├── device/
 │   └── rockchip/
 │       └── x88pro/
 │           ├── AndroidProducts.mk  # Declares aosp_x88pro lunch target
 │           ├── BoardConfig.mk      # Board config (partitions, kernel, WiFi)
-│           ├── device.mk           # Build recipe (blobs, props, permissions)
+│           ├── aosp_x88pro.mk      # Product definition (active — declared in AndroidProducts.mk)
+│           ├── device.mk           # Legacy file — not included by build system
 │           ├── kernel-config-stock.txt  # Stock kernel config (Phase 1 ref)
 │           ├── dts/
 │           │   ├── rk3566-x88pro.dts           # Our device tree source
