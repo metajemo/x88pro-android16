@@ -50,7 +50,7 @@ These are all enabled by default in the AOSP build system for release builds.
 | `dtbo.img` | 157 KB | Built from BSP kernel `rk3566-box-demo-v10.dtb` via mkdtimg |
 
 **Build time:** ~10 minutes (incremental, 12 cores, -j4)
-**Total build issues resolved:** 31 (see BUILD_TROUBLESHOOTING.md)
+**Total build issues resolved:** 32 (see BUILD_TROUBLESHOOTING.md)
 
 ## Known Build Deviations from Upstream
 
@@ -67,8 +67,8 @@ See [VENDOR_BLOB_INVENTORY.md](VENDOR_BLOB_INVENTORY.md) for full details.
 
 | Source | Count | Examples |
 |---|---|---|
-| AOSP built from source | 15 | ClearKey, audio HALs, health HAL |
-| Stock Android 11 vendor | 37 | Mali GPU, MPP video, WiFi/BT, libdrm |
+| AOSP built from source | 16 | ClearKey, audio HALs, health HAL, libdrm (vendor_available) |
+| Stock Android 11 vendor | 36 | Mali GPU, MPP video, WiFi/BT |
 | Rockchip RKNN2 SDK | 5 | NPU runtime, rknn_server |
 | BSP kernel built | 2 | bcmdhd.ko + dhd_static_buf.ko |
 

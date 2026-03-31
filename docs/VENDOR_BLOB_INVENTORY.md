@@ -27,6 +27,7 @@ No vendor blobs needed. AOSP version is always preferred.*
 | Health service | `hardware/interfaces/health` | `android.hardware.health@2.1-service` |
 | TV CEC service | `hardware/interfaces/tv/cec` | `android.hardware.tv.cec@1.0-service` |
 | WiFi configs | `frameworks/opt/net/wifi` | `wpa_supplicant.conf` etc. |
+| DRM library | `external/libdrm` | `vendor_available: true` — AOSP copy served to vendor automatically; no vendor prebuilt needed |
 
 ---
 
@@ -48,7 +49,6 @@ with Android's gralloc HAL.
 | `lib64/hw/android.hardware.graphics.allocator@4.0-impl-bifrost.so` | gralloc allocator |
 | `lib64/hw/android.hardware.graphics.mapper@4.0-impl-bifrost.so` | gralloc mapper |
 | `lib64/libbaseparameter.so` | Rockchip display calibration |
-| `lib64/libdrm.so` | DRM library (Rockchip-patched; required by gralloc HAL) |
 
 ### Audio — Rockchip HDMI Audio
 Board-specific audio routing for HDMI PCM output.
@@ -167,8 +167,8 @@ Cannot use prebuilt — must match kernel version exactly.*
 
 | Category | Count | Source |
 |---|---|---|
-| Built from AOSP source | 15 | `android-16.0.0_r1` |
-| Extracted from stock vendor | 37 | X88 Pro Android 11 (2022) |
+| Built from AOSP source | 16 | `android-16.0.0_r1` |
+| Extracted from stock vendor | 36 | X88 Pro Android 11 (2022) |
 | Downloaded from Rockchip SDK | 5 | `rknn-toolkit2` v1.6.0 |
 | Built from BSP kernel | 2 | `rockchip-linux/kernel develop-5.10` |
 | **Total** | **59** | |

@@ -144,8 +144,9 @@ flash() {
     # Boot partition: kernel + ramdisk (~64MB)
     flash_partition boot "$IMG_DIR/boot.img"
 
-    # Device tree overlays (~4MB)
-    # Needed for correct hardware init on RK3566
+    # Device tree overlays (~157KB)
+    # Built from BSP kernel: rk3566-box-demo-v10.dtb via mkdtimg
+    # Prebuilt in device/rockchip/x88pro/prebuilt/dtbo.img
     flash_partition dtbo "$IMG_DIR/dtbo.img"
 
     # AVB (Android Verified Boot) metadata (~1MB)

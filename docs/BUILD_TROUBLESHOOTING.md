@@ -1025,3 +1025,30 @@ bcmdhd.ko fails with an unknown symbol error.
 command for `dhd_static_buf.ko`, and install it to `/vendor/etc/init/` via
 `PRODUCT_COPY_FILES`. The `on boot` trigger fires before the WiFi HAL starts,
 ensuring the dependency is satisfied when `wifi_load_driver()` is first called.
+
+---
+
+## Issue 32: BT init.rc duplicate — ckati "overriding commands" build failure
+
+**Error:**
+```
+ckati: warning: overriding commands for target `out/target/product/x88pro/vendor/etc/init/android.hardware.bluetooth@1.0-service.rc'
+```
+Build fails or emits a warning due to two rules installing the same file.
+
+**Cause:** `android.hardware.bluetooth@1.0-service` is defined in AOSP's
+`hardware/interfaces/bluetooth/1.0/default/Android.bp` as a `cc_binary` with
+`init_rc: ["android.hardware.bluetooth@1.0-service.rc"]`. Soong automatically
+installs this .rc to `/vendor/etc/init/` as part of the module's install rules.
+
+A `PRODUCT_COPY_FILES` entry in `aosp_x88pro.mk` was also installing the same
+.rc from `proprietary/etc/init/`, creating a duplicate target.
+
+Unlike the other HAL services (keymaster, gatekeeper, DRM, power, lights,
+neural networks) which are pure prebuilt binaries with no Soong-installed .rc,
+the BT service binary is `cc_prebuilt_binary` but the .rc is owned by the AOSP
+source module, not the prebuilt.
+
+**Fix:** Remove the `android.hardware.bluetooth@1.0-service.rc` entry from
+`PRODUCT_COPY_FILES` in `aosp_x88pro.mk`. The AOSP Soong module already handles
+installing the correct .rc file.

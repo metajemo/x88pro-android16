@@ -217,7 +217,7 @@ phase3-device-tree:
 	@scripts/phase3_device_prep.sh device-tree $(DEVICE) $(VENDOR) device/$(VENDOR)/$(DEVICE)
 
 # =============================================================================
-# PHASE 4 - BUILD ANDROID 16
+# PHASE 4 - BUILD ANDROID 16 [✅ COMPLETE]
 # =============================================================================
 # The actual AOSP build. This will take several hours even on fast hardware.
 # Approximate build times:
@@ -244,7 +244,7 @@ phase4-aosp:
 	@scripts/phase4_build.sh aosp $(AOSP_DIR) $(PRODUCT) $(JOBS)
 
 # =============================================================================
-# PHASE 5 - FLASH TO DEVICE
+# PHASE 5 - FLASH TO DEVICE [🔜 READY — install rkdeveloptool first]
 # =============================================================================
 # Flashes the built Android 16 images to the X88 Pro box.
 # The box enters Rockchip loader mode for flashing (different from fastboot).

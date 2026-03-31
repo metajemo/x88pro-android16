@@ -363,15 +363,8 @@ cc_prebuilt_binary {
     check_elf_files: false,
 }
 
-// ============================================================
-// DRM: libdrm (required by graphics allocator HAL)
-// ============================================================
-
-cc_prebuilt_library_shared {
-    name: "libdrm",
-    vendor: true,
-    srcs: ["proprietary/lib64/libdrm.so"],
-    compile_multilib: "64",
-    strip: { none: true },
-    check_elf_files: false,
-}
+// NOTE: libdrm is NOT declared here.
+// external/libdrm/Android.bp has vendor_available: true — the AOSP-built
+// libdrm is accessible to vendor processes. A vendor prebuilt with the same
+// module name would be silently dropped by Soong (duplicate module). The
+// AOSP copy is used automatically; no action needed here.

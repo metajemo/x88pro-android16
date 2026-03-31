@@ -40,7 +40,32 @@
 - **File:** `docs/PARTITION_LAYOUT.md` — created 2026-03-31
 - Includes physical partition table, dynamic partition comparison (A11 vs A16), flash target list
 
-## Phase 5 TODOs
+## Phase 5 TODOs (Pre-Flash Blockers)
+
+### HIGH: Install rkdeveloptool on build machine — Phase 5 blocker
+- **Status:** NOT installed (`which rkdeveloptool` returns nothing)
+- **Required for:** All `phase5_flash.sh` commands that write to device partitions
+- **How:**
+  ```bash
+  sudo apt-get install libusb-1.0-0-dev
+  git clone https://github.com/rockchip-linux/rkdeveloptool
+  cd rkdeveloptool && autoreconf -i && ./configure && make && sudo make install
+  ```
+- Must be done before attempting any flash step
+
+### LOW: tee-supplicant binary absent — keymaster TEE ops will fail on first boot
+- `tee-supplicant` is not in the stock vendor dump and was not extracted
+- `android.hardware.keymaster@4.0-service.optee` will fail TEE operations
+- **Impact:** Acceptable for a fresh device with no PIN/password set (no keystore
+  data to protect). Screen lock and KeyStore will degrade gracefully.
+- **Action:** None required for bring-up. Investigate if OP-TEE is needed later.
+
+### LOW: Camera binaries not in PRODUCT_PACKAGES — camera will not work on first boot
+- `proprietary/bin/` contains camera-related binaries that were extracted from stock
+- None are declared in `Android.bp` or `PRODUCT_PACKAGES`
+- **Impact:** Camera app will crash or show no preview
+- **Action:** Inventory camera blobs, add to Android.bp + PRODUCT_PACKAGES after
+  confirming which camera HAL version the stock firmware uses
 
 ### ~~dtbo.img — use stock or build from BSP~~ ✅ DONE
 - **Commit:** `c7fcdac` — rebuilt from BSP kernel `rk3566-box-demo-v10.dtb` via `mkdtimg`
