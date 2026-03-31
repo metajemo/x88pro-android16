@@ -62,6 +62,10 @@ error()   { echo -e "${RED}✗ ERROR:${NC} $1"; exit 1; }
 #   screen                    - Terminal multiplexer: keeps sync alive if SSH drops
 #   flex/bison                - Parser generators used by the build system
 #   lib32z1-dev/libc6-dev-i386 - 32-bit libs needed for some AOSP host tools
+#   libusb-1.0-0-dev          - USB library required to BUILD rkdeveloptool (Phase 5 flash tool)
+#   libudev-dev               - udev library required to BUILD rkdeveloptool
+#   pkg-config                - Used by rkdeveloptool ./configure
+#   autoconf/automake/libtool - Required for rkdeveloptool autoreconf -i step
 #
 # Note on Ubuntu 24.04 changes vs older guides:
 #   - libncurses5 was renamed to libncurses-dev
@@ -130,7 +134,13 @@ deps() {
         lib32stdc++6 \
         lib32z1 \
         libreadline-dev \
-        libghc-zlib-dev
+        libghc-zlib-dev \
+        libusb-1.0-0-dev \
+        libudev-dev \
+        pkg-config \
+        autoconf \
+        automake \
+        libtool
 
     echo ""
     success "Dependencies installed successfully."
@@ -494,6 +504,58 @@ verify() {
 }
 
 # =============================================================================
+# RKDEVELOPTOOL - Build the Rockchip flashing tool from source
+# =============================================================================
+# rkdeveloptool is required for Phase 5 (flashing). It is not available as an
+# apt package and must be built from source. Build dependencies (libusb-1.0-0-dev,
+# libudev-dev, pkg-config, autoconf, automake, libtool) are installed by deps().
+#
+# Expected output:
+#   Cloning rkdeveloptool...
+#   Running autoreconf...
+#   Running configure...
+#   Building...
+#   ==> rkdeveloptool installed: rkdeveloptool ver 1.x
+#
+# Time: ~2 minutes
+rkdeveloptool_build() {
+    if command -v rkdeveloptool &>/dev/null; then
+        success "rkdeveloptool already installed: $(rkdeveloptool --version 2>&1 | head -1)"
+        return 0
+    fi
+
+    info "Building rkdeveloptool from source..."
+    local build_dir
+    build_dir="$(mktemp -d)"
+
+    info "Cloning rkdeveloptool..."
+    git clone https://github.com/rockchip-linux/rkdeveloptool "$build_dir/rkdeveloptool"
+
+    info "Running autoreconf..."
+    cd "$build_dir/rkdeveloptool"
+    autoreconf -i
+
+    info "Running configure..."
+    ./configure
+
+    info "Building..."
+    make -j"$(nproc)"
+
+    info "Installing to /usr/local/bin..."
+    sudo make install
+
+    cd - > /dev/null
+    rm -rf "$build_dir"
+
+    if command -v rkdeveloptool &>/dev/null; then
+        success "rkdeveloptool installed: $(rkdeveloptool --version 2>&1 | head -1)"
+    else
+        error "rkdeveloptool build failed — check output above"
+        exit 1
+    fi
+}
+
+# =============================================================================
 # FULL - Run all steps in sequence (default when no argument given)
 # =============================================================================
 full() {
@@ -513,6 +575,7 @@ full() {
     java_setup
     setup_ccache
     repo_install
+    rkdeveloptool_build
     sync
     verify
 
@@ -530,21 +593,23 @@ full() {
 COMMAND="${1:-full}"
 
 case "$COMMAND" in
-    full)    full ;;
-    deps)    deps ;;
-    java)    java_setup ;;
-    ccache)  setup_ccache ;;
-    repo)    repo_install ;;
-    sync)    sync ;;
-    verify)  verify ;;
+    full)          full ;;
+    deps)          deps ;;
+    java)          java_setup ;;
+    ccache)        setup_ccache ;;
+    repo)          repo_install ;;
+    rkdeveloptool) rkdeveloptool_build ;;
+    sync)          sync ;;
+    verify)        verify ;;
     *)
-        echo "Usage: $0 {full|deps|java|ccache|repo|sync|verify}"
+        echo "Usage: $0 {full|deps|java|ccache|repo|rkdeveloptool|sync|verify}"
         echo ""
         echo "  (no argument)  Run full Phase 2 setup"
         echo "  deps           Install Ubuntu build packages"
         echo "  java           Fix Java version to 17"
         echo "  ccache         Set up compiler cache"
         echo "  repo           Install repo tool + configure git"
+        echo "  rkdeveloptool  Build and install rkdeveloptool (required for Phase 5 flash)"
         echo "  sync           Sync AOSP source (~100GB)"
         echo "  verify         Verify Phase 2 is complete"
         exit 1

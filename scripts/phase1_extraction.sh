@@ -7,9 +7,20 @@
 #
 # Prerequisites:
 #   - ADB installed on your system (Windows WSL or Linux)
+#       Ubuntu: sudo apt-get install adb
+#       Windows WSL: install via Android Studio SDK Platform Tools
 #   - X88 Pro box connected to the same network
 #   - Developer Options enabled on the box (Settings > About > tap Build Number 7 times)
 #   - ADB over network enabled in Developer Options
+#
+# Tools needed for later phases (install during Phase 2):
+#   - rkdeveloptool  - Rockchip flash tool (Phase 5). Must be built from source.
+#       Build deps: libusb-1.0-0-dev libudev-dev pkg-config autoconf automake libtool
+#       Build: git clone https://github.com/rockchip-linux/rkdeveloptool
+#              cd rkdeveloptool && autoreconf -i && ./configure && make && sudo make install
+#       Phase 2 script handles this automatically: ./phase2_environment.sh rkdeveloptool
+#   - simg2img       - Converts sparse images (Phase 3, Phase 5)
+#       Install: sudo apt-get install android-sdk-libsparse-utils
 #
 # Usage:
 #   chmod +x x88pro_phase1_extraction.sh
