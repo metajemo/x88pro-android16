@@ -1,0 +1,345 @@
+// X88 Pro RK3566 — Vendor prebuilt ELF modules
+//
+// Android 16 enforces that ELF prebuilts (binaries and shared libraries)
+// must use cc_prebuilt_binary / cc_prebuilt_library_shared rather than
+// PRODUCT_COPY_FILES. Non-ELF files (firmware, configs, .rc files) stay
+// in PRODUCT_COPY_FILES in aosp_x88pro.mk.
+//
+// All modules here have:
+//   vendor: true          — installs to /vendor partition
+//   strip: { none: true } — already stripped, do not re-strip
+//   check_elf_files: false — blobs from Android 11; dependency checking
+//                           against Android 16 libraries would fail
+
+// ============================================================
+// GPU: ARM Mali-G52 Bifrost
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "libGLES_mali",
+    vendor: true,
+    srcs: ["proprietary/lib64/egl/libGLES_mali.so"],
+    compile_multilib: "64",
+    relative_install_path: "egl",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "android.hardware.graphics.allocator@4.0-impl-bifrost",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/android.hardware.graphics.allocator@4.0-impl-bifrost.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "android.hardware.graphics.mapper@4.0-impl-bifrost",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/android.hardware.graphics.mapper@4.0-impl-bifrost.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "vulkan.rk356x",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/vulkan.rk356x.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "hwcomposer.rk30board",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/hwcomposer.rk30board.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "hw_output.default",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/hw_output.default.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "rockchip.hardware.outputmanager@1.0-impl",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/rockchip.hardware.outputmanager@1.0-impl.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "libbaseparameter",
+    vendor: true,
+    srcs: ["proprietary/lib64/libbaseparameter.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Audio HAL
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "audio.primary.rk30board",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/audio.primary.rk30board.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Video: Rockchip MPP + OMX
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "libmpp",
+    vendor: true,
+    srcs: ["proprietary/lib64/libmpp.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "libomxvpu_dec",
+    vendor: true,
+    srcs: ["proprietary/lib64/libomxvpu_dec.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "libomxvpu_enc",
+    vendor: true,
+    srcs: ["proprietary/lib64/libomxvpu_enc.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "librga",
+    vendor: true,
+    srcs: ["proprietary/lib64/librga.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// WiFi: bcmdhd kernel module
+// (kernel modules are ELF but use prebuilt_etc for /vendor/lib/modules/)
+// ============================================================
+
+prebuilt_etc {
+    name: "bcmdhd.ko",
+    vendor: true,
+    src: "proprietary/modules/bcmdhd.ko",
+    sub_dir: "modules",
+}
+
+// ============================================================
+// Bluetooth: AP6398S (BCM4359c0)
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "libbt-vendor",
+    vendor: true,
+    srcs: ["proprietary/lib64/libbt-vendor.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Security: Keymaster 4.0 + Gatekeeper (OP-TEE)
+// ============================================================
+
+cc_prebuilt_binary {
+    name: "android.hardware.keymaster@4.0-service.optee",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.keymaster@4.0-service.optee"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "android.hardware.gatekeeper@1.0-service.optee",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.gatekeeper@1.0-service.optee"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "android.hardware.weaver@1.0-impl",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/android.hardware.weaver@1.0-impl.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "libRkkeymaster4",
+    vendor: true,
+    srcs: ["proprietary/lib64/libRkkeymaster4.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Widevine DRM L3
+// (Google proprietary — extracted from stock device firmware)
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "libwvhidl",
+    vendor: true,
+    srcs: ["proprietary/lib/libwvhidl.so"],
+    compile_multilib: "32",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "libwvdrmengine",
+    vendor: true,
+    srcs: ["proprietary/lib/mediadrm/libwvdrmengine.so"],
+    compile_multilib: "32",
+    relative_install_path: "mediadrm",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "android.hardware.drm@1.3-service.widevine",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.drm@1.3-service.widevine"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Health HAL + Memory tracking
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "memtrack.rk356x",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/memtrack.rk356x.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// Power HAL + Lights HAL
+// ============================================================
+
+cc_prebuilt_binary {
+    name: "android.hardware.power-service.rockchip",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.power-service.rockchip"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "android.hardware.lights-service.rockchip",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.lights-service.rockchip"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// HDMI CEC
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "hdmi_cec.rk356x",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/hdmi_cec.rk356x.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+// ============================================================
+// NPU: RKNPU (RKNN2 v1.6.0)
+// ============================================================
+
+cc_prebuilt_library_shared {
+    name: "librknnrt",
+    vendor: true,
+    srcs: ["proprietary/lib64/librknnrt.so"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "rknn_server",
+    vendor: true,
+    srcs: ["proprietary/bin/rknn_server"],
+    compile_multilib: "64",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_library_shared {
+    name: "rockchip.hardware.neuralnetworks@1.0-impl",
+    vendor: true,
+    srcs: ["proprietary/lib64/hw/rockchip.hardware.neuralnetworks@1.0-impl.so"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+
+cc_prebuilt_binary {
+    name: "rockchip.hardware.neuralnetworks@1.0-service",
+    vendor: true,
+    srcs: ["proprietary/bin/rockchip.hardware.neuralnetworks@1.0-service"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
