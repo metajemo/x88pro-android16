@@ -5,12 +5,11 @@
 /vendor/bin/rknn_server                             u:object_r:rknn_server_exec:s0
 
 # bcmdhd WiFi kernel module
-# vendor_kernel_module_file is a standard AOSP type for out-of-tree vendor modules
-/vendor/lib/modules/bcmdhd\.ko                      u:object_r:vendor_kernel_module_file:s0
+/vendor/lib/modules/bcmdhd\.ko                      u:object_r:vendor_file:s0
 
 # rknpu kernel module (loads the NPU hardware driver, creates /dev/rknpu)
-/vendor/lib/modules/rknpu\.ko                       u:object_r:vendor_kernel_module_file:s0
-/vendor/lib/modules/rknpu-clang\.ko                 u:object_r:vendor_kernel_module_file:s0
+/vendor/lib/modules/rknpu\.ko                       u:object_r:vendor_file:s0
+/vendor/lib/modules/rknpu-clang\.ko                 u:object_r:vendor_file:s0
 
 # NPU device nodes (created by rknpu.ko at module load time)
 /dev/rknpu[0-9]*                                    u:object_r:rknpu_device:s0
