@@ -492,3 +492,62 @@ cd aosp && m -j4 2>&1 | tee ../build_log.txt
 
 **Note:** This failure occurs at ~87% after a long compile — ninja resumes
 incrementally so the restart is fast (only vendor image needs regenerating).
+
+---
+
+## Issue 14: `found ELF prebuilt in PRODUCT_COPY_FILES`
+
+**Error:**
+```
+out/target/product/x88pro/vendor/bin/hw/android.hardware.drm@1.3-service.widevine: error:
+found ELF prebuilt in PRODUCT_COPY_FILES, use cc_prebuilt_binary /
+cc_prebuilt_library_shared instead.
+```
+
+**Cause:** Android 16 enforces that ELF files (binaries and `.so` shared libraries)
+cannot be installed via `PRODUCT_COPY_FILES`. They must be declared as
+`cc_prebuilt_binary` or `cc_prebuilt_library_shared` modules in `Android.bp`.
+Kernel modules (`.ko`) must use `prebuilt_etc`.
+
+**Fix:** Create `device/rockchip/x88pro/Android.bp` with all prebuilt ELF modules,
+then reference them via `PRODUCT_PACKAGES` in `aosp_x88pro.mk`.
+
+Example for a binary:
+```
+cc_prebuilt_binary {
+    name: "android.hardware.drm@1.3-service.widevine",
+    vendor: true,
+    srcs: ["proprietary/bin/android.hardware.drm@1.3-service.widevine"],
+    compile_multilib: "64",
+    relative_install_path: "hw",
+    strip: { none: true },
+    check_elf_files: false,
+}
+```
+
+Example for a shared library:
+```
+cc_prebuilt_library_shared {
+    name: "libGLES_mali",
+    vendor: true,
+    srcs: ["proprietary/lib64/egl/libGLES_mali.so"],
+    compile_multilib: "64",
+    relative_install_path: "egl",
+    strip: { none: true },
+    check_elf_files: false,
+}
+```
+
+Example for a kernel module:
+```
+prebuilt_etc {
+    name: "bcmdhd.ko",
+    vendor: true,
+    src: "proprietary/modules/bcmdhd.ko",
+    sub_dir: "modules",
+}
+```
+
+**Note:** `check_elf_files: false` is required for blobs from Android 11 — their
+dependency graph does not match Android 16 libraries. Non-ELF files (firmware
+`.bin`, `.hcd`, `.txt`, `.rc`, `.xml`) remain in `PRODUCT_COPY_FILES`.
