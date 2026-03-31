@@ -580,3 +580,55 @@ service rknn_server /vendor/bin/rknn_server
 **Note:** If the init.rc file is inside `proprietary/` (gitignored), move it to
 the device tree proper (e.g., `device/rockchip/x88pro/init.rknn_server.rc`) so
 the fix can be committed. Config files do not belong in `proprietary/`.
+
+---
+
+## Issue 16: `system.img` out of space during packaging
+
+**Error:**
+```
+common.ExternalError: Failed to run command '['mkuserimg_mke2fs', ...]' (exit code 4):
+__populate_fs: Could not allocate block in ext2 filesystem while writing file "SystemUI.apk"
+e2fsdroid: Could not allocate block in ext2 filesystem while populating file system
+
+Out of space? Out of inodes? The tree size of ... is 1183424512 bytes (1128 MB),
+with reserved space of 0 bytes (0 MB).
+The max image size for filesystem files is 1139335168 bytes (1086 MB),
+out of a total partition size of 1157693440 bytes (1104 MB).
+```
+
+**Cause:** `BOARD_SYSTEMIMAGE_PARTITION_SIZE` was sized based on the Android 11
+stock partition layout. Android 16's system content (~1128 MB) exceeds it.
+
+**Fix:** Increase `BOARD_SYSTEMIMAGE_PARTITION_SIZE` in `BoardConfig.mk`.
+Check that the super partition has sufficient headroom first:
+```
+# Sum all dynamic partition sizes and compare to BOARD_SUPER_PARTITION_SIZE
+# Super has ~703MB free on this device — plenty of room to grow system
+BOARD_SYSTEMIMAGE_PARTITION_SIZE := 1291911168  # ~1.2GB (was 1.1GB)
+```
+Then sync to AOSP tree and rebuild: `m -j4` (ninja resumes incrementally).
+
+---
+
+## Issue 17: `checkvintf` cannot fetch vendor manifest
+
+**Error:**
+```
+FAILED: out/target/product/x88pro/obj/PACKAGING/check_vintf_all_intermediates/check_vintf_vendor.log
+[INFO] Fetch 'out/target/product/x88pro/vendor/etc/vintf/manifest.xml': NAME_NOT_FOUND
+[INFO] Fetch 'out/target/product/x88pro/vendor/manifest.xml': NAME_NOT_FOUND
+getDeviceHalManifest: -2 VINTF parse error: Cannot read out/target/product/x88pro/vendor/manifest.xml
+ERROR: Cannot fetch vendor manifest.
+```
+
+**Cause:** The vendor VINTF manifest (`manifest.xml`) existed in
+`proprietary/etc/vintf/manifest.xml` but was never declared to the build system.
+`DEVICE_MANIFEST_FILE` was missing from `BoardConfig.mk`, so the file was never
+installed into the vendor partition output.
+
+**Fix:** Add to `BoardConfig.mk`:
+```makefile
+DEVICE_MANIFEST_FILE := device/rockchip/x88pro/proprietary/etc/vintf/manifest.xml
+```
+Then sync to AOSP tree and rebuild: `m -j4` (ninja resumes incrementally).
