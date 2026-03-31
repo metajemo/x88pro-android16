@@ -116,6 +116,16 @@ TARGET_COPY_OUT_VENDOR  := vendor
 TARGET_COPY_OUT_PRODUCT := product
 TARGET_COPY_OUT_ODM     := odm
 
+# --- DTBO --------------------------------------------------------------------
+# Device tree blob overlay image, built from BSP kernel DTB via mkdtimg.
+# Source DTB: kernel/rockchip-bsp/arch/arm64/boot/dts/rockchip/rk3566-box-demo-v10.dtb
+# Rebuild command (run after kernel build):
+#   aosp/prebuilts/misc/linux-x86/libufdt/mkdtimg create \
+#     aosp/out/target/product/x88pro/dtbo.img --page_size=4096 \
+#     kernel/rockchip-bsp/arch/arm64/boot/dts/rockchip/rk3566-box-demo-v10.dtb
+BOARD_PREBUILT_DTBOIMAGE := device/rockchip/x88pro/prebuilt/dtbo.img
+BOARD_DTBOIMG_PARTITION_SIZE := 4194304
+
 # --- VINTF -------------------------------------------------------------------
 # Vendor manifest: declares HALs provided by the vendor partition
 DEVICE_MANIFEST_FILE := device/rockchip/x88pro/vintf/manifest.xml

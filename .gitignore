@@ -6,6 +6,9 @@
 backup/
 *.img
 
+# Exception: prebuilt images in device tree are tracked (BSP DTBOs, etc.)
+!device/rockchip/x88pro/prebuilt/*.img
+
 # AOSP source tree (100GB+ - way too large for git)
 aosp/
 
