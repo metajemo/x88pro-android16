@@ -52,11 +52,11 @@
 - Test partition-by-partition flashing
 - Test full restore from Phase 1 backup
 
-### Update vendor blob inventory
-- Cross-check `docs/VENDOR_BLOB_INVENTORY.md` against the final build output
-- Verify no blobs were added/removed during iterative conflict resolution
-- Update any entries that changed (source, version, notes)
-- Confirm Category 1 (AOSP built) list matches actual removed conflicts
+### ~~Update vendor blob inventory~~ ✅ DONE
+- **Updated 2026-03-31** after pre-flash sweep found Issues 27-29
+- Moved `libdrm` and BT service binary from Category 1 (AOSP) → Category 2 (vendor prebuilt)
+- Added `dhd_static_buf.ko` to Category 4 (BSP kernel built)
+- Updated summary: 15 AOSP / 37 stock / 5 SDK / 2 BSP = 59 total
 
 ## Rebuild scope after Phase 4
 
@@ -65,8 +65,6 @@ No full rebuild needed for any of the remaining tasks:
 | Task | What to rebuild | Command | Time |
 |---|---|---|---|
 | ~~FORTIFY_SOURCE patch~~ ✅ | ~~Kernel + boot.img~~ | — done — | — |
+| ~~Pre-flash sweep (Issues 27-29)~~ ✅ | ~~vendor.img + super.img~~ | — done — | — |
 | SELinux enforcing | boot.img only (cmdline) + vendor per denial | `m bootimage`, then `m vendorimage` per fix | Minutes per iteration |
 | CVE audit | Nothing — docs only | — | — |
-| Vendor blob inventory | Nothing — docs only | — | — |
-
-A full rebuild would only be needed if the audit revealed a blob that shouldn't be in the build at all — an unlikely edge case.

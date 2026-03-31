@@ -22,10 +22,8 @@ No vendor blobs needed. AOSP version is always preferred.*
 | Memtrack HAL | `hardware/interfaces/memtrack` | `android.hardware.memtrack@1.0-impl` |
 | TV CEC HAL | `hardware/interfaces/tv/cec` | `android.hardware.tv.cec@1.0-impl` |
 | Keymaster support | `system/keymaster` | `libkeymaster4support` |
-| libdrm | `external/libdrm` | Standard DRM library |
 | Audio service | `frameworks/av` | `android.hardware.audio.service` |
 | Media OMX service | `frameworks/av/media/libstagefright` | `android.hardware.media.omx@1.0-service` |
-| Bluetooth service | `system/bt` | `android.hardware.bluetooth@1.0-service` |
 | Health service | `hardware/interfaces/health` | `android.hardware.health@2.1-service` |
 | TV CEC service | `hardware/interfaces/tv/cec` | `android.hardware.tv.cec@1.0-service` |
 | WiFi configs | `frameworks/opt/net/wifi` | `wpa_supplicant.conf` etc. |
@@ -50,6 +48,7 @@ with Android's gralloc HAL.
 | `lib64/hw/android.hardware.graphics.allocator@4.0-impl-bifrost.so` | gralloc allocator |
 | `lib64/hw/android.hardware.graphics.mapper@4.0-impl-bifrost.so` | gralloc mapper |
 | `lib64/libbaseparameter.so` | Rockchip display calibration |
+| `lib64/libdrm.so` | DRM library (Rockchip-patched; required by gralloc HAL) |
 
 ### Audio — Rockchip HDMI Audio
 Board-specific audio routing for HDMI PCM output.
@@ -86,6 +85,7 @@ bcmdhd out-of-tree driver + Broadcom proprietary firmware.
 |---|---|
 | `firmware/BCM4359C0.hcd` | BT controller init firmware |
 | `lib64/libbt-vendor.so` | BT vendor library |
+| `bin/android.hardware.bluetooth@1.0-service` | BT HAL service binary |
 
 ### Security — OP-TEE / TrustZone (Keymaster 4.0)
 Tied to the specific `trust.img` on this device.
@@ -159,6 +159,7 @@ Cannot use prebuilt — must match kernel version exactly.*
 | Component | Source | Notes |
 |---|---|---|
 | `bcmdhd.ko` | BSP kernel `drivers/net/wireless/rockchip_wlan/rkwifi` | Rebuilt against BSP 5.10 |
+| `dhd_static_buf.ko` | BSP kernel `drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd` | bcmdhd dependency (`modinfo depends:`); must load first |
 
 ---
 
@@ -166,11 +167,11 @@ Cannot use prebuilt — must match kernel version exactly.*
 
 | Category | Count | Source |
 |---|---|---|
-| Built from AOSP source | 18 | `android-16.0.0_r1` |
-| Extracted from stock vendor | 34 | X88 Pro Android 11 (2022) |
+| Built from AOSP source | 15 | `android-16.0.0_r1` |
+| Extracted from stock vendor | 37 | X88 Pro Android 11 (2022) |
 | Downloaded from Rockchip SDK | 5 | `rknn-toolkit2` v1.6.0 |
-| Built from BSP kernel | 1 | `rockchip-linux/kernel develop-5.10` |
-| **Total** | **58** | |
+| Built from BSP kernel | 2 | `rockchip-linux/kernel develop-5.10` |
+| **Total** | **59** | |
 
 ---
 

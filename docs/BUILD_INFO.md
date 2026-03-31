@@ -50,7 +50,7 @@ These are all enabled by default in the AOSP build system for release builds.
 | `dtbo.img` | 157 KB | Built from BSP kernel `rk3566-box-demo-v10.dtb` via mkdtimg |
 
 **Build time:** ~10 minutes (incremental, 12 cores, -j4)
-**Total build issues resolved:** 23 (see BUILD_TROUBLESHOOTING.md)
+**Total build issues resolved:** 29 (see BUILD_TROUBLESHOOTING.md)
 
 ## Known Build Deviations from Upstream
 
@@ -67,10 +67,10 @@ See [VENDOR_BLOB_INVENTORY.md](VENDOR_BLOB_INVENTORY.md) for full details.
 
 | Source | Count | Examples |
 |---|---|---|
-| AOSP built from source | 18+ | ClearKey, audio HALs, health HAL |
-| Stock Android 11 vendor | 34 | Mali GPU, MPP video, WiFi/BT |
+| AOSP built from source | 15 | ClearKey, audio HALs, health HAL |
+| Stock Android 11 vendor | 37 | Mali GPU, MPP video, WiFi/BT, libdrm |
 | Rockchip RKNN2 SDK | 5 | NPU runtime, rknn_server |
-| BSP kernel built | 1 | bcmdhd.ko WiFi module |
+| BSP kernel built | 2 | bcmdhd.ko + dhd_static_buf.ko |
 
 ## Pre-Flash Validation — 2026-03-31
 
@@ -115,8 +115,10 @@ All images validated before flashing. One critical bug was found and fixed (Issu
 | WiFi firmware | `etc/firmware/fw_bcm4359c0_ag*.bin` | ✅ Present |
 | BT firmware | `etc/firmware/BCM4359C0.hcd` | ✅ Present |
 | WiFi driver | `etc/modules/bcmdhd.ko` | ✅ Present |
+| WiFi driver dependency | `etc/modules/dhd_static_buf.ko` | ✅ Present (added Issue 27) |
+| DRM library | `lib64/libdrm.so` | ✅ Present (added Issue 28) |
 
-### Bug found and fixed
+### Bugs found and fixed
 
 **Issue 23 — bcmdhd.ko path mismatch (would have broken WiFi on first boot)**
 
@@ -126,3 +128,19 @@ The WiFi HAL would have called `insmod` on a path that does not exist.
 
 Fixed by updating `WIFI_DRIVER_MODULE_PATH` in `BoardConfig.mk` to match the actual
 install path. See Issue 23 in `BUILD_TROUBLESHOOTING.md` for full details.
+
+**Issue 27 — dhd_static_buf.ko missing (would have broken WiFi module load)**
+
+`modinfo bcmdhd.ko` lists `depends: dhd_static_buf`. The dependency module was built
+alongside bcmdhd but never added to `Android.bp` or installed to vendor. Fixed by
+copying into `proprietary/modules/` and declaring in `Android.bp` + `PRODUCT_PACKAGES`.
+
+**Issue 28 — libdrm.so missing (would have crashed graphics allocator HAL)**
+
+`libdrm.so` existed in `proprietary/lib64/` but was only referenced in the dead
+`device.mk`. Not in `Android.bp`, not in vendor. Fixed by adding to both.
+
+**Issue 29 — SELinux file_contexts wrong bcmdhd path**
+
+`/vendor/lib/modules/bcmdhd.ko` in `file_contexts` — correct path is
+`/vendor/etc/modules/`. Also added label for `dhd_static_buf.ko`.
