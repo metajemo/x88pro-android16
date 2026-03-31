@@ -118,7 +118,7 @@ TARGET_COPY_OUT_ODM     := odm
 
 # --- VINTF -------------------------------------------------------------------
 # Vendor manifest: declares HALs provided by the vendor partition
-DEVICE_MANIFEST_FILE := device/rockchip/x88pro/proprietary/etc/vintf/manifest.xml
+DEVICE_MANIFEST_FILE := device/rockchip/x88pro/vintf/manifest.xml
 
 # --- Display -----------------------------------------------------------------
 # HDMI output via VOP2 (BSP kernel required)
