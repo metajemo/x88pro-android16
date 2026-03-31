@@ -3,6 +3,13 @@
 # Board: X88PRO-RK3566-4D32-V1.0
 # SoC:   Rockchip RK3566
 
+# Disable kernel VINTF requirements enforcement.
+# The Rockchip BSP kernel (5.10) predates FCM 6 hardening requirements:
+#   - CONFIG_DEVMEM=y (BSP needs /dev/mem; FCM 6 requires =n)
+#   - CONFIG_TRACE_GPU_MEM not present in BSP defconfig
+# Engineering build only — not required for device bring-up.
+PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false
+
 PRODUCT_NAME   := aosp_x88pro
 PRODUCT_DEVICE := x88pro
 PRODUCT_BRAND  := Android
