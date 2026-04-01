@@ -41,8 +41,8 @@ TARGET_KERNEL_CONFIG_OVERLAYS := \
 TARGET_KERNEL_ARCH     := arm64
 TARGET_KERNEL_CLANG_COMPILE := true
 
-BOARD_KERNEL_BASE        := 0x00200000
-BOARD_KERNEL_PAGESIZE    := 4096
+BOARD_KERNEL_BASE        := 0x10000000
+BOARD_KERNEL_PAGESIZE    := 2048
 BOARD_KERNEL_OFFSET      := 0x00008000
 BOARD_RAMDISK_OFFSET     := 0x01000000
 BOARD_KERNEL_TAGS_OFFSET := 0x00000100
@@ -67,7 +67,7 @@ BOARD_KERNEL_CMDLINE := \
 # must be specified via BOARD_MKBOOTIMG_ARGS --dtb (mkbootimg enforces this).
 BOARD_BOOT_HEADER_VERSION := 2
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
-BOARD_MKBOOTIMG_ARGS += --dtb kernel/rockchip-bsp/arch/arm64/boot/dts/rockchip/rk3566-box-demo-v10.dtb
+BOARD_MKBOOTIMG_ARGS += --dtb device/rockchip/x88pro/prebuilt/rk3566-x88pro-stock.dtb
 BOARD_MKBOOTIMG_ARGS += --dtb_offset $(BOARD_DTB_OFFSET)
 
 # BUILD_BROKEN_DUP_RULES: suppress ckati --werror_overriding_commands.
