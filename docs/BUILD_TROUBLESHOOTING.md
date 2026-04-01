@@ -24,6 +24,7 @@ why it would have failed, and how it was fixed), see the
 | 27–31 | **Round 2**: dhd_static_buf, libdrm, SELinux paths, HAL init.rc files, finit_module dep resolution |
 | 32 | **Round 3**: BT init.rc duplicate (ckati conflict) |
 | 33–38 | **Phase 5 rebuild**: boot header v2, DTB embedding, BT rc regeneration, system_ext crash, AB_OTA_UPDATER default, AVB recovery key |
+| 39 | **Flash incident**: SPL overwritten with wrong binary — RK3566 boot chain, MaskROM vs Loader, DDR timing |
 
 ---
 
@@ -1238,3 +1239,137 @@ BOARD_AVB_RECOVERY_ROLLBACK_INDEX_LOCATION := 2
 
 Using the AOSP test key is correct for an engineering build (`vbmeta --flags 3`
 disables verification anyway). For a production build, replace with a real key.
+
+---
+
+## Issue 39: SPL overwritten with wrong binary — device fails to boot from eMMC
+
+**Symptom:** After a manual `rkdeveloptool wl 0x40 backup/uboot.img` command, the
+device produces no output (no HDMI, no USB enumeration, no ADB) on power-on. The
+pinhole button still forces MaskROM mode. `rkdeveloptool db` works in MaskROM but
+the device never reaches Loader mode or boots.
+
+---
+
+### The RK3566 boot chain — what boots what
+
+Understanding this chain is essential before issuing any raw LBA write commands
+on a Rockchip device.
+
+```
+BootROM  (permanent silicon ROM — can never be damaged)
+  │  reads LBA 0x40 on eMMC
+  ▼
+SPL / Preloader  (at eMMC LBA 0x40 — NOT a GPT partition)
+  │  initialises DDR/DRAM with board-specific timing
+  │  reads GPT, locates the "uboot" partition
+  ▼
+U-Boot  (GPT partition "uboot", LBA 0x4000 on this device)
+  │  loads ARM Trusted Firmware
+  │  verifies and hands off to the kernel
+  ▼
+Trust / ATF  (GPT partition "trust", LBA 0x6000)
+  ▼
+Kernel  (GPT partition "boot", LBA 0xC800)
+```
+
+**MaskROM mode** is the BootROM's own USB mode. It activates when:
+- The MASKROM pin is held low (pinhole button), **or**
+- No valid SPL is found at LBA 0x40
+
+**Loader mode** is U-Boot's USB mode. It requires U-Boot to actually be running —
+which in turn requires the SPL to have successfully initialised DDR first.
+
+---
+
+### What the SPL is and why it is critical
+
+The SPL is a small (~200 KB) binary compiled with **board-specific DDR timing
+parameters** for the exact LPDDR4 chips on the PCB. It lives at LBA 0x40, which
+is below the GPT — it has no partition name and is never touched by
+`rkdeveloptool write-partition` or the normal flash script.
+
+During Phase 1 extraction the SPL was never backed up because
+`rkdeveloptool read-partition` only reads named GPT partitions. The `uboot`
+partition (LBA 0x4000) is U-Boot proper — a completely different binary in FIT
+image format (`d0 0d fe ed` magic).
+
+---
+
+### What went wrong
+
+**Flash attempts 1 & 2** only touched `boot`, `dtbo`, `vbmeta`, and `super`.
+The SPL at LBA 0x40 was completely untouched. U-Boot ran, tried to boot the
+broken A16 kernel, and hung silently (no Loader mode fallback from this vintage
+of Rockchip U-Boot).
+
+**The damaging command:** during manual MaskROM recovery, the wrong binary was
+written to the SPL slot:
+
+```bash
+# WRONG — this writes the full U-Boot FIT image into the SPL slot
+rkdeveloptool wl 0x40 backup/uboot.img
+```
+
+`backup/uboot.img` is the U-Boot FIT image (starts with `d0 0d fe ed`). It is
+not a valid SPL/IDB binary. The BootROM found it at LBA 0x40, could not
+interpret it as a preloader, and the device hung without DDR being initialised —
+invisible to USB, invisible to HDMI.
+
+The root confusion: LBA 0x40 (64) and the `uboot` partition at LBA 0x4000
+(16384) look numerically similar but are 8 MB apart and contain entirely
+different binaries. The GPT partition table confirmed the real offsets:
+
+| Partition | Start LBA | Start bytes | Binary format |
+|-----------|-----------|-------------|---------------|
+| *(SPL — no GPT entry)* | 0x40 | 32 KB | Rockchip IDB + SPL |
+| uboot | 0x4000 | 8 MB | U-Boot FIT image |
+| trust | 0x6000 | 12 MB | ATF BL31/BL32 |
+| boot  | 0xC800 | 25 MB | Android boot image |
+| super | 0x1EF200 | ~1 GB | Dynamic partition image |
+
+---
+
+### Recovery state and path forward
+
+The rkbin generic SPL (1056 MHz and 920 MHz variants) was written to LBA 0x40
+as a replacement. These binaries are designed for the RK3566 but carry generic
+DDR timing that may not match the specific LPDDR4 chips on the X88 Pro PCB.
+Without UART output it is impossible to tell whether DDR initialisation succeeds
+or fails silently.
+
+**The device is not permanently bricked.** The BootROM is in silicon and cannot
+be damaged. The pinhole button always forces MaskROM mode, and `rkdeveloptool db`
+always works from there.
+
+**Pending:**
+- UART adapter (FT232RL, 1500000 baud) — will show exactly where in the boot
+  chain things fail (BootROM output, SPL DDR init log, U-Boot messages)
+- Once we can read UART output, we can either confirm the rkbin SPL works or
+  source the correct board-specific preloader from an X88 Pro stock firmware
+  package
+
+**Lesson:** Never issue `rkdeveloptool wl <offset> <file>` without first
+confirming the exact partition layout via GPT inspection:
+
+```bash
+# Read GPT from device in MaskROM mode after db
+rkdeveloptool rl 0 17408 /tmp/gpt_raw.bin
+
+# Parse it
+python3 -c "
+import struct
+data = open('/tmp/gpt_raw.bin','rb').read()
+entries_lba = struct.unpack_from('<Q', data, 512+72)[0]
+n = struct.unpack_from('<I', data, 512+80)[0]
+sz = struct.unpack_from('<I', data, 512+84)[0]
+print(f'{'Partition':<20} {'Start LBA':>12}')
+for i in range(n):
+    off = entries_lba*512 + i*sz
+    e = data[off:off+sz]
+    if e[:16] == b'\x00'*16: continue
+    s = struct.unpack_from('<Q',e,32)[0]
+    nm = e[56:128].decode('utf-16-le').rstrip(chr(0))
+    print(f'{nm:<20} {s:>12}')
+"
+```

@@ -78,6 +78,29 @@
 
 ## Phase 5 TODOs (Post-Flash)
 
+### HIGH: Restore working SPL / recover device from flash incident
+- **Status:** Device boots to no output (HDMI, ADB, USB) — SPL at LBA 0x40 is the rkbin
+  generic SPL (920 MHz variant last written), which may not match X88 Pro DDR timing
+- **Device is NOT bricked:** BootROM + pinhole button always gives MaskROM access
+- **Blocker:** Without UART we cannot see whether DDR init passes or fails
+- **Options:**
+  1. **UART** (FT232RL, 1500000 baud) — ordered, will show exact failure point
+  2. **Stock firmware preloader** — find an X88 Pro stock firmware package online;
+     it will contain the correct board-specific preloader for LBA 0x40
+  3. **Try remaining DDR frequency variants** from rkbin (780 MHz, 528 MHz ultra)
+- **GPT partition offsets confirmed** (see Issue 39 in BUILD_TROUBLESHOOTING.md):
+  - SPL (no GPT): LBA 0x40
+  - uboot: LBA 0x4000
+  - trust: LBA 0x6000
+  - boot: LBA 0xC800
+  - super: LBA 0x1EF200
+- **Current eMMC state:**
+  - LBA 0x40: rkbin generic SPL 920 MHz (may be incompatible)
+  - LBA 0x4000: backup/uboot.img ✓
+  - LBA 0x6000: backup/trust.img ✓
+  - LBA 0xC800: backup/boot.img (A11) ✓
+  - super: A16 content (not the blocker)
+
 ### MEDIUM: Migrate boot image to header version 4
 - **Current state:** Boot image uses header v2 (required for stock A11 uboot compatibility)
 - **Why v4 matters:** GKI standard; future Android updates will assume v4; v2 is legacy
