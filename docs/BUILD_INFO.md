@@ -52,6 +52,39 @@ These are all enabled by default in the AOSP build system for release builds.
 **Build time:** ~10 minutes (incremental, 12 cores, -j4)
 **Total build issues resolved:** 32 (see BUILD_TROUBLESHOOTING.md)
 
+## Phase 5 Rebuild — 2026-04-01 (boot header v2 fix)
+
+First flash attempt (2026-03-31) failed because the stock Android 11 uboot on the
+X88 Pro only accepts boot image header v2; AOSP 16 defaults to v4. Six additional
+issues were found and resolved during the rebuild (Issues 33–38).
+
+**BoardConfig.mk changes from Phase 4 baseline:**
+
+| Change | Reason |
+|---|---|
+| `BOARD_BOOT_HEADER_VERSION := 2` | Stock A11 uboot cannot parse v4 header |
+| `BOARD_MKBOOTIMG_ARGS += --dtb ... --dtb_offset ...` | v2 header requires embedded DTB |
+| `BUILD_BROKEN_DUP_RULES := true` | BT .rc regeneration duplicate (Issue 35) |
+| `AB_OTA_UPDATER := false` | Default `true` caused check_partition_sizes to halve super budget |
+| Removed `system_ext` from partition list | Empty image path caused Python crash |
+| Added `BOARD_AVB_RECOVERY_*` variables | Required for non-A/B + AVB (Issue 38) |
+
+**Rebuilt images (2026-04-01):**
+
+| Image | Size | Built | Notes |
+|---|---|---|---|
+| `boot.img` | 64 MB | 00:12 | **v2 header + embedded DTB** — compatible with stock A11 uboot |
+| `system.img` | 1.1 GB | 09:48 | Rebuilt |
+| `vendor.img` | 97 MB | 09:48 | Rebuilt |
+| `product.img` | 284 MB | 09:48 | Rebuilt |
+| `odm.img` | 890 KB | 09:48 | Rebuilt |
+| `recovery.img` | 96 MB | 09:48 | Rebuilt with recovery AVB key |
+| `vbmeta.img` | 64 KB | 09:48 | Updated — includes recovery AVB footer |
+| `super.img` | 1.5 GB | 10:04 | Rebuilt (single-slot, no system_ext) |
+| `dtbo.img` | 157 KB | 00:12 | Unchanged |
+
+**Total build issues resolved: 38** (see BUILD_TROUBLESHOOTING.md issues 33–38)
+
 ## Critical Testing Rounds — 2026-03-31
 
 Three successive rounds of critical review were done before committing to Phase 5.
@@ -124,8 +157,10 @@ Goal: verify docs and scripts match the actual build state. No rebuild needed.
 |---|---|---|
 | `CONFIG_FORTIFY_SOURCE` | ✅ Enabled | Mali CSF driver patched (Issue 22) |
 | SELinux | ⚠️ Permissive | For bring-up, switch to enforcing later |
-| AVB | ✅ Enabled | `BOARD_AVB_ENABLE := true` |
+| AVB | ✅ Enabled | `BOARD_AVB_ENABLE := true`; vbmeta flags=3 (eng build, verification disabled) |
 | Widevine | ⚠️ L3 only | No L1 secure video path |
+| Boot header | ⚠️ v2 (not v4) | Temporary — stock A11 uboot requires v2; migrate to v4 after uboot upgrade |
+| A/B OTA | ⚠️ Disabled | `AB_OTA_UPDATER := false` — X88 Pro is single-slot |
 
 ## Vendor Blob Sources
 

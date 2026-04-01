@@ -68,7 +68,7 @@ See [docs/HARDWARE_SUPPORT_ANALYSIS.md](docs/HARDWARE_SUPPORT_ANALYSIS.md) for f
 | Phase 2 | Build environment setup | ✅ Complete |
 | Phase 3 | Device tree & vendor blobs | ✅ Complete |
 | Phase 4 | Android 16 build | ✅ Complete |
-| Phase 5 | Flash & verify | 🔜 Ready to flash |
+| Phase 5 | Flash & verify | 🔄 In Progress (attempt 2 pending) |
 
 ---
 
@@ -212,12 +212,16 @@ For build issues, see `docs/BUILD_TROUBLESHOOTING.md` (26 documented issues with
 ### Phase 5 — Flash to device
 
 ```bash
-# Ensure rkdeveloptool is installed (built in Phase 2)
-which rkdeveloptool
+# Ensure rkdeveloptool is installed
+which rkdeveloptool   # should print /usr/bin/rkdeveloptool
 
-# Flash Android 16 to the device (device must be in loader mode)
-./scripts/phase5_flash.sh flash aosp x88pro 192.168.1.213
+# Flash Android 16 to the device (USB OTG cable must be connected)
+./scripts/phase5_flash.sh flash /path/to/x88pro-android16/aosp x88pro <box-ip>
 ```
+
+> **Note on boot image header:** The flash script uses boot.img built with header v2
+> for compatibility with the stock Android 11 uboot. Upgrading to header v4 requires
+> replacing uboot first — see `docs/TODO.md`.
 
 > ⚠️ **Warning:** This replaces Android 11 with Android 16. Make sure Phase 1
 > backup exists before flashing!

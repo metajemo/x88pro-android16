@@ -58,7 +58,24 @@ BOARD_KERNEL_CMDLINE := \
     init=/init \
     earlycon=uart8250,mmio32,0xfe660000 \
     rootwait \
-    ro
+    ro \
+    firmware_class.path=/vendor/etc/firmware \
+    loop.max_part=7
+
+# Boot image header version 2 matches the stock Android 11 uboot expectation.
+# v2 embeds a DTB blob that Rockchip uboot uses for hardware init; the DTB
+# must be specified via BOARD_MKBOOTIMG_ARGS --dtb (mkbootimg enforces this).
+BOARD_BOOT_HEADER_VERSION := 2
+BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
+BOARD_MKBOOTIMG_ARGS += --dtb kernel/rockchip-bsp/arch/arm64/boot/dts/rockchip/rk3566-box-demo-v10.dtb
+BOARD_MKBOOTIMG_ARGS += --dtb_offset $(BOARD_DTB_OFFSET)
+
+# BUILD_BROKEN_DUP_RULES: suppress ckati --werror_overriding_commands.
+# android.hardware.bluetooth@1.0-service.rc is installed by both Soong
+# (hardware/interfaces/bluetooth/1.0/default/) and a Make PRODUCT_COPY_FILES
+# path triggered by BOARD_BOOT_HEADER_VERSION := 2 regeneration. Both source
+# files are byte-identical; the duplicate is harmless for an eng build.
+BUILD_BROKEN_DUP_RULES := true
 
 # --- Bootloader / Partitions -------------------------------------------------
 # Partition layout confirmed from Phase 1 extraction (gdisk output)
@@ -81,6 +98,11 @@ TARGET_NO_RECOVERY   := false
 
 BOARD_USES_METADATA_PARTITION := true
 
+# X88 Pro uses single-slot (non-A/B) OTA. Android 16 defaults AB_OTA_UPDATER
+# to true, which causes check_partition_sizes to halve the allowed limit.
+# Explicitly set false so num_slots=1 and sum(partitions) <= super_size.
+AB_OTA_UPDATER := false
+
 # Super partition (dynamic partitions)
 # Total super size confirmed from partition table (Phase 1)
 BOARD_SUPER_PARTITION_SIZE             := 3263168512  # ~3.1GB
@@ -88,16 +110,16 @@ BOARD_SUPER_PARTITION_GROUPS           := rockchip_dynamic_partitions
 BOARD_ROCKCHIP_DYNAMIC_PARTITIONS_SIZE := 3258974208  # max group size
 BOARD_ROCKCHIP_DYNAMIC_PARTITIONS_PARTITION_LIST := \
     system \
-    system_ext \
     vendor \
     product \
     odm
 
 # Individual partition sizes (approximate, based on stock)
+# system_ext removed — no content assigned; its modules fold into system/system_ext/
+# check_partition_sizes crashes on empty system_ext_image path
 BOARD_SYSTEMIMAGE_PARTITION_SIZE       := 1291911168  # ~1.2GB (increased from 1.1GB — A16 system content ~1128MB)
 BOARD_VENDORIMAGE_PARTITION_SIZE       := 515899392   # ~493MB
 BOARD_PRODUCTIMAGE_PARTITION_SIZE      := 795017216   # ~750MB
-BOARD_SYSTEM_EXTIMAGE_PARTITION_SIZE   := 52592640    # ~50MB
 BOARD_ODMIMAGE_PARTITION_SIZE          := 4194304     # 4MB (increased from 612KB for precompiled_sepolicy)
 
 BOARD_BOOTIMAGE_PARTITION_SIZE         := 67108864    # 64MB
@@ -167,6 +189,11 @@ BOARD_SEPOLICY_DIRS += device/rockchip/x88pro/sepolicy
 # --- Verified Boot -----------------------------------------------------------
 BOARD_AVB_ENABLE := true
 BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3  # disable verification for dev
+# Non-A/B devices require a standalone AVB key for recovery (cannot chain into vbmeta).
+BOARD_AVB_RECOVERY_KEY_PATH := external/avb/test/data/testkey_rsa2048.pem
+BOARD_AVB_RECOVERY_ALGORITHM := SHA256_RSA2048
+BOARD_AVB_RECOVERY_ROLLBACK_INDEX := $(PLATFORM_SECURITY_PATCH_TIMESTAMP)
+BOARD_AVB_RECOVERY_ROLLBACK_INDEX_LOCATION := 2
 
 # --- Misc --------------------------------------------------------------------
 TARGET_BOARD_PLATFORM := rk356x

@@ -112,7 +112,8 @@ flash() {
     echo "==> Rebooting device into loader mode..."
     adb connect "$BOX_IP:5555" 2>/dev/null || true
     adb root 2>/dev/null || true
-    adb reboot loader
+    adb reboot loader 2>/dev/null || true
+    # If device is already in loader mode (USB), adb will fail — that's fine.
 
     # RK3566 takes ~4s to enumerate in loader mode after reboot
     echo "    Waiting for device to enter loader mode..."

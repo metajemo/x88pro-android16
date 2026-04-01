@@ -42,16 +42,9 @@
 
 ## Phase 5 TODOs (Pre-Flash Blockers)
 
-### HIGH: Install rkdeveloptool on build machine — Phase 5 blocker
-- **Status:** NOT installed (`which rkdeveloptool` returns nothing)
-- **Required for:** All `phase5_flash.sh` commands that write to device partitions
-- **How:**
-  ```bash
-  sudo apt-get install libusb-1.0-0-dev
-  git clone https://github.com/rockchip-linux/rkdeveloptool
-  cd rkdeveloptool && autoreconf -i && ./configure && make && sudo make install
-  ```
-- Must be done before attempting any flash step
+### ~~HIGH: Install rkdeveloptool on build machine~~ ✅ DONE
+- **Status:** Installed at `/usr/bin/rkdeveloptool` (ver 1.0.0)
+- **simg2img** also confirmed at `/usr/bin/simg2img`
 
 ### LOW: tee-supplicant binary absent — keymaster TEE ops will fail on first boot
 - `tee-supplicant` is not in the stock vendor dump and was not extracted
@@ -83,13 +76,27 @@
 - Added `dhd_static_buf.ko` to Category 4 (BSP kernel built)
 - Updated summary: 15 AOSP / 37 stock / 5 SDK / 2 BSP = 59 total
 
-## Rebuild scope after Phase 4
+## Phase 5 TODOs (Post-Flash)
 
-No full rebuild needed for any of the remaining tasks:
+### MEDIUM: Migrate boot image to header version 4
+- **Current state:** Boot image uses header v2 (required for stock A11 uboot compatibility)
+- **Why v4 matters:** GKI standard; future Android updates will assume v4; v2 is legacy
+- **Prerequisite:** Replace stock A11 uboot with a Rockchip Android 12/13 compatible uboot
+  that can parse v4 headers (e.g., from a Rockchip Android 12 BSP for RK3566)
+- **Steps when ready:**
+  1. Flash a compatible Rockchip RK3566 uboot (via rkdeveloptool `write-partition uboot`)
+  2. Remove `BOARD_BOOT_HEADER_VERSION := 2` and the `--dtb` mkbootimg args from BoardConfig.mk
+  3. Rebuild `boot.img` with `m bootimage`
+  4. Flash and verify
+- **Risk:** Wrong uboot = brick (keep Phase 1 uboot.img backup safe)
+
+## Rebuild scope after Phase 5
 
 | Task | What to rebuild | Command | Time |
 |---|---|---|---|
 | ~~FORTIFY_SOURCE patch~~ ✅ | ~~Kernel + boot.img~~ | — done — | — |
 | ~~Pre-flash sweep (Issues 27-29)~~ ✅ | ~~vendor.img + super.img~~ | — done — | — |
+| ~~Boot header v2 fix~~ ✅ | ~~boot.img + super.img~~ | — done — | — |
 | SELinux enforcing | boot.img only (cmdline) + vendor per denial | `m bootimage`, then `m vendorimage` per fix | Minutes per iteration |
+| Boot header v4 | boot.img only (after uboot upgrade) | `m bootimage` | Minutes |
 | CVE audit | Nothing — docs only | — | — |

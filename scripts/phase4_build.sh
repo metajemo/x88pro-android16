@@ -244,9 +244,14 @@ build() {
     cd "$AOSP_DIR"
 
     # Source environment
+    # NOTE: If running from a non-interactive shell (e.g. background job, cron),
+    # source + lunch may fail. Use soong_ui.bash directly instead:
+    #   build/soong/soong_ui.bash --make-mode \
+    #     TARGET_PRODUCT=aosp_x88pro TARGET_BUILD_VARIANT=eng TARGET_RELEASE=bp2a \
+    #     2>&1 | tee ../build_log.txt
     source build/envsetup.sh > /dev/null 2>&1
 
-    # Lunch
+    # Lunch — requires TARGET_RELEASE=bp2a (trunk_staging not in android-16.0.0_r1)
     info "Running lunch aosp_x88pro-bp2a-eng..."
     lunch aosp_x88pro-bp2a-eng || \
         error "lunch failed. Run setup first: ./scripts/phase4_build.sh setup"
